@@ -318,6 +318,309 @@ class Level1(QWidget):
         self.pushButton_back_init.clicked.connect(lambda: self.signal_back_init.emit())
         self.pushButton_back_init.clicked.connect(lambda: sound.click_button())
 
+    # Métodos
+    def show_collisions_static(self):
+
+        if not self.show_collisions_toggle:
+            return
+
+        for item in list(self.scene.items()):
+            if isinstance(item, QGraphicsPolygonItem):
+                self.scene.removeItem(item)
+
+        for item in self.scene.items():
+
+            if not isinstance(item, QGraphicsPixmapItem):
+                continue
+
+            if isinstance(item, Victim):
+                polygon = item.mapToScene(item.shape().toFillPolygon())
+
+                poly_item = QGraphicsPolygonItem(polygon)
+                poly_item.setPen(QPen(QColor(0, 128, 255), 1))
+                poly_item.setBrush(QColor(0, 128, 255, 50))
+                self.scene.addItem(poly_item)
+
+                continue
+
+            if isinstance(item, Enemy):
+                polygon = item.mapToScene(item.shape().toFillPolygon())
+
+                poly_item = QGraphicsPolygonItem(polygon)
+                poly_item.setPen(QPen(QColor(128, 0, 0), 1))
+                poly_item.setBrush(QColor(128, 0, 0, 50))
+                self.scene.addItem(poly_item)
+
+                continue
+
+            if isinstance(item, Player):
+                polygon = item.mapToScene(item.shape().toFillPolygon())
+
+                poly_item = QGraphicsPolygonItem(polygon)
+                poly_item.setPen(QPen(QColor(0, 128, 0), 1))
+                poly_item.setBrush(QColor(0, 128, 0, 50))
+                self.scene.addItem(poly_item)
+
+                continue
+
+            if isinstance(item, Platforms):
+                rect1 = item.boundingRect()
+
+                polygon1 = QPolygonF([
+                    rect1.topLeft(),
+                    rect1.topRight(),
+                    rect1.bottomRight(),
+                    rect1.bottomLeft()
+                ])
+
+                polygon1 = item.mapToScene(polygon1)
+
+                poly_item1 = QGraphicsPolygonItem(polygon1)
+                poly_item1.setPen(QPen(QColor(0, 150, 255), 2, Qt.SolidLine))  # azul
+                poly_item1.setBrush(QColor(0, 150, 255, 25))
+                self.scene.addItem(poly_item1)
+
+                rect2 = item.area1()
+
+                polygon2 = QPolygonF([
+                    rect2.topLeft(),
+                    rect2.topRight(),
+                    rect2.bottomRight(),
+                    rect2.bottomLeft()
+                ])
+
+                polygon2 = item.mapToScene(polygon2)
+
+                poly_item2 = QGraphicsPolygonItem(polygon2)
+                poly_item2.setPen(QPen(QColor(255, 0, 0), 1, Qt.SolidLine))
+                poly_item2.setBrush(QColor(255, 0, 0, 25))
+                self.scene.addItem(poly_item2)
+
+            polygon = item.mapToScene(item.shape().toFillPolygon())
+
+            poly_item = QGraphicsPolygonItem(polygon)
+            poly_item.setPen(QPen(Qt.green, 1))
+            poly_item.setBrush(Qt.transparent)
+            self.scene.addItem(poly_item)
+
+    def show_collisions_dynamic(self):
+        if not self.show_collisions_toggle:
+            return
+
+        for item in list(self.scene.items()):
+            if isinstance(item, QGraphicsPolygonItem) and item.data(0) == "debug_player_enemy":
+                self.scene.removeItem(item)
+
+        for item in self.scene.items():
+            if not isinstance(item, QGraphicsPixmapItem):
+                continue
+
+            polygon = item.mapToScene(item.shape().toFillPolygon())
+
+            if item is self.player:
+                pen = QPen(QColor(0, 255, 0), 1)
+
+                poly_item = QGraphicsPolygonItem(polygon)
+                poly_item.setPen(pen)
+                poly_item.setBrush(QColor(0, 255, 0, 50))
+
+                poly_item.setData(0, "debug_player_enemy")
+
+                self.scene.addItem(poly_item)
+                continue
+
+            if item is self.enemy:
+                pen = QPen(QColor(255, 0, 0), 1)
+
+                poly_item = QGraphicsPolygonItem(polygon)
+                poly_item.setPen(pen)
+                poly_item.setBrush(QColor(255, 0, 0, 50))
+
+                poly_item.setData(0, "debug_player_enemy")
+
+                self.scene.addItem(poly_item)
+                continue
+
+    def method_show_collisions_toggle(self):
+        self.show_collisions_toggle = not self.show_collisions_toggle
+        if self.show_collisions_toggle:
+            self.show_collisions_static()
+            self.show_collisions_dynamic()
+        else:
+            for item in self.scene.items():
+                if isinstance(item, QGraphicsPolygonItem):
+                    self.scene.removeItem(item)
+
+    def update_dashboard(self):
+        self.label.setText(f"I - {self.player_points}")
+        self.label_2.setText(f"Top - {self.players_top}")
+        self.label_3.setText(f"II - {self.enemy_points}")
+
+    def method_player_move_jump(self, type):
+        self.player_move_jump_type = type
+        if self.player_move_jump_type == "up":
+            self.player.set_direction("jump_up")
+            self.player_move_jump_lock = False
+
+    def power_up_immunity(self):
+        # Activar Power-Up
+        if not self.player_immunity_lock:
+            self.player_immunity_lock = True
+            self.player_immunity_status = True
+            self.label_life.setStyleSheet("""QLabel { color: orange; }""")
+            self.player_immunity_counter = self.player_immunity_initial
+            self.player_immunity_current = self.player_immunity_counter
+            self.player_immunity_timer.start(1000)
+            self.label_immunity.setStyleSheet("""QLabel { color: cyan; }""")
+            print(self.player_immunity_counter)
+            return
+        self.player_immunity_counter -= 1
+
+        if self.player_immunity_status:
+            # Finalizar Power-Up
+            if self.player_immunity_counter <= 0:
+                self.player_immunity_status = False
+                # Iniciar cooldown
+                self.player_immunity_counter = self.player_immunity_cooldown
+                self.player_immunity_current = self.player_immunity_counter
+                self.label_immunity.setStyleSheet("""QLabel { color: gray; }""")
+                self.label_life.setStyleSheet("QLabel { color: yellow; }")
+                return
+            self.player_immunity_current = self.player_immunity_counter
+            return
+
+        # Fin de cooldown
+        if not self.player_immunity_status:
+            if self.player_immunity_counter <= 0:
+                self.player_immunity_lock = False
+                self.player_immunity_counter = self.player_immunity_initial
+                self.player_immunity_current = self.player_immunity_counter
+                self.player_immunity_timer.stop()
+                print(self.player_immunity_counter)
+                self.label_immunity.setStyleSheet("""QLabel { color: yellow; }""")
+                return
+            self.player_immunity_current = self.player_immunity_counter
+            print(self.player_immunity_counter)
+
+    def power_up_regeneration(self):
+        # Activar Power-Up
+        if not self.player_regeneration_lock:
+            self.player_regeneration_lock = True
+            self.player_regeneration_status = True
+            self.label_life.setStyleSheet("""QLabel { color: green; }""")
+            self.player_life_current += 1
+            self.player_regeneration_counter = self.player_regeneration_initial
+            self.player_regeneration_current = self.player_regeneration_counter
+            self.player_regeneration_timer.start(1000)
+            self.label_regeneration.setStyleSheet("""QLabel { color: cyan; }""")
+            print(self.player_regeneration_counter)
+            return
+        self.player_regeneration_counter -= 1
+
+        if self.player_regeneration_status:
+            self.label_life.setStyleSheet("""QLabel { color: green; }""")
+            if self.player_regeneration_counter >= 1:
+                self.player_life_current += 1
+            # Finalizar Power-Up
+            if self.player_regeneration_counter <= 0:
+                self.player_regeneration_status = False
+                # Iniciar cooldown
+                self.player_regeneration_counter = self.player_regeneration_cooldown
+                self.player_regeneration_current = self.player_regeneration_counter
+                self.label_regeneration.setStyleSheet("""QLabel { color: gray; }""")
+                self.label_life.setStyleSheet("""QLabel { color: yellow; }""")
+                return
+            self.player_regeneration_current = self.player_regeneration_counter
+            return
+
+        # Fin de cooldown
+        if not self.player_regeneration_status:
+            if self.player_regeneration_counter <= 0:
+                self.player_regeneration_lock = False
+                self.player_regeneration_counter = self.player_regeneration_initial
+                self.player_regeneration_current = self.player_regeneration_counter
+                self.player_regeneration_timer.stop()
+                print(self.player_regeneration_counter)
+                self.label_regeneration.setStyleSheet("""QLabel { color: yellow; }""")
+                return
+            self.player_regeneration_current = self.player_regeneration_counter
+            print(self.player_regeneration_counter)
+
+    def power_up_run(self):
+        # Activar Power-Up
+        if not self.player_run_lock:
+            self.player_run_lock = True
+            self.player_run_status = True
+            self.player_run_toggle = True
+            self.player_run_counter = self.player_run_initial
+            self.player_run_current = self.player_run_counter
+            self.player_run_timer.start(1000)
+            self.label_run.setStyleSheet("""QLabel { color: cyan; }""")
+            print(self.player_run_counter)
+            return
+        self.player_run_counter -= 1
+
+        if self.player_run_status:
+            if self.player_life_current < self.player_life_initial:
+                self.player_life_current += 1
+
+            # Finalizar Power-Up
+            if self.player_run_counter <= 0:
+                self.player_run_status = False
+                self.player_run_toggle = False
+                # Iniciar cooldown
+                self.player_run_counter = self.player_run_cooldown
+                self.player_run_current = self.player_run_counter
+                print(self.player_run_counter)
+                self.label_run.setStyleSheet("""QLabel { color: gray; }""")
+                return
+            self.player_run_current = self.player_run_counter
+            print(self.player_run_counter)
+            return
+
+        # Fin de cooldown
+        if not self.player_run_status:
+            if self.player_run_counter <= 0:
+                self.player_run_lock = False
+                self.player_run_counter = self.player_run_initial
+                self.player_run_current = self.player_run_counter
+                self.player_run_timer.stop()
+                self.label_run.setStyleSheet("""QLabel { color: yellow; }""")
+                return
+            self.player_run_current = self.player_run_counter
+            print(self.player_run_counter)
+
+    def damage_management(self, player_damage_fall_accumulated_arg=0):
+
+        total_damage = player_damage_fall_accumulated_arg
+
+        if total_damage <= 0:
+            return
+
+        if not self.player_immunity_status:
+            self.player_life_current -= total_damage
+
+        self.player_damage_fall_accumulated = 0
+
+        if not self.player_immunity_status:
+            self.player_damage_receiving_status = True
+            self.label_life.setStyleSheet("""QLabel { color: red; }""")
+
+        self.player_damage_timer.start(1000)
+
+    def damage_management_aux(self):
+        self.player_damage_receiving_status = False
+        self.label_life.setStyleSheet("""QLabel { color: yellow; }""")
+
+    def scheduler(self, ms, func, *funcs):
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+        timer.timeout.connect(func)
+        for f in funcs:
+            timer.timeout.connect(f)
+        timer.start(ms)
+
+# ======================================================================================================================
 
 # ======================================================================================================================
 # Hilo principal
