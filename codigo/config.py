@@ -3,8 +3,9 @@ import os
 
 from PySide6.QtGui import QFont, QFontDatabase
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-fuente_ruta = os.path.join(BASE_DIR, "assets", "fonts", "PixelOperator-Bold.ttf")
+from src.config.rutas import *
+
+fuente_ruta = os.path.join(DIR_FONTS, "PixelOperator-Bold.ttf")
 
 def fuente(size=0) -> QFont:
     fuente_id = QFontDatabase.addApplicationFont(fuente_ruta)

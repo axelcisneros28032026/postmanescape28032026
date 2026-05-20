@@ -1,0 +1,10 @@
+{
+  "coin": {
+    "animation": {
+      "frames": [0,1,2,3,4,5],
+      "fps": 12,
+      "loop": true
+    },
+    "value": 10
+  }
+}

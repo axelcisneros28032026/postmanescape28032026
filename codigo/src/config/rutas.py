@@ -6,10 +6,11 @@ DIR_BASE = Path(__file__).resolve().parents[2]
 #   - Carpetas principales
 #       Assets
 DIR_ASSETS = os.path.join(DIR_BASE, "assets")
-#       Scenes
-DIR_SCENES = os.path.join(DIR_BASE, "scenes")
+#       Data
+DIR_DATA = os.path.join(DIR_BASE, "data")
 #       Src
 DIR_SRC = os.path.join(DIR_BASE, "src")
+
 #   - Rutas frecuentes
 #       Assets
 #           Fonts
@@ -27,3 +28,6 @@ DIR_MUSIC = os.path.join(DIR_ASSETS, "music")
 DIR_SOUNDS = os.path.join(DIR_ASSETS, "sounds")
 #           Tiles
 DIR_TILES = os.path.join(DIR_ASSETS, "tiles")
+#       Src
+#           Scenes
+DIR_SCENES = os.path.join(DIR_SRC, "scenes")

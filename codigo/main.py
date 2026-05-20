@@ -4,36 +4,28 @@ Integrantes:
 24410206 Estrella Rodríguez Camacho
 24410215 Karen Tatiana Romero Ramírez
 """
-import os
+
+
 # Importaciones
 import sys
 
-from PySide6.QtCore import Qt, QUrl, QTimer
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QIcon, QAction, Qt, QPixmap, QPalette, QColor
-from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QWidget, QGridLayout, QStatusBar, QMenu, \
     QMenuBar, QMessageBox, QDialog, QVBoxLayout, QFrame, QSizePolicy, QStackedWidget
 
 from config import fuente, fuente_nombre
-from scenes.configuracion_red import Ventanared
-from scenes.solicitud_nombres import VentanaRegistro
+from src.audio.sound import Sound
 from src.components.navigationMenu import NavigationMenu
 from src.config.rutas import *
+from src.scenes.red_config import Ventanared
+from src.scenes.names_input import VentanaRegistro
 
-# Constantes globales
 #   Nombres
 APP_NOMBRE = "Postman Escape"
 APP_NOMBRE_2 = ("Postman\n"
               "Escape")
 
-#   Audio
-player = QMediaPlayer()
-audio_output = QAudioOutput()
-player.setAudioOutput(audio_output)
-
-player.setSource(QUrl.fromLocalFile(os.path.join(DIR_BASE, "assets", "music", "background.mp3")))
-audio_output.setVolume(0.1)
-player.play()
 
 # [A] Gestor de ventanas
 class MainWindow(QMainWindow):
@@ -41,7 +33,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         # Disposición de ventana
         self.setWindowTitle(f"{APP_NOMBRE}")
-        self.setWindowIcon(QIcon(os.path.join(APP_ICON)))
+        self.setWindowIcon(QIcon(APP_ICON))
         self.setGeometry(320, 180, 1280, 720)
         self.setContentsMargins(0, 0, 0, 0)
 
@@ -54,7 +46,7 @@ class MainWindow(QMainWindow):
         self.label_A1 = QLabel()
         self.label_A2 = QLabel()
         self.layout_A1 = QGridLayout()
-        self.navigationMenu = NavigationMenu(
+        self.navigation_menu = NavigationMenu(
             ["Jugar", "Configuración", "Salir"],
             "*",
             0,
@@ -71,10 +63,10 @@ class MainWindow(QMainWindow):
         self.menu_2 = QMenu("Editar", self)
         self.menu_3 = QMenu("Configuración", self)
         self.menu_4 = QMenu("Ayuda", self)
-        self.menuBar = QMenuBar()
-        self.stackedWidget = QStackedWidget()
-        self.stackedWidget_A1_page_1 = QWidget()
-        self.statusBar = QStatusBar(self)
+        self.menu_bar = QMenuBar()
+        self.stacked_widget = QStackedWidget()
+        self.stacked_widget_A1_page_1 = QWidget()
+        self.status_bar = QStatusBar(self)
         self.widget_A = QWidget()
         self.widget_B = QWidget()
 
@@ -99,7 +91,7 @@ class MainWindow(QMainWindow):
         self.layout_A1.setColumnStretch(0, 1)
         self.layout_A1.setRowStretch(0, 1)
         self.layout_A1.addWidget(self.label_A1, 1, 1, 1, 1)
-        self.layout_A1.addWidget(self.navigationMenu, 2, 1, 1, 1)
+        self.layout_A1.addWidget(self.navigation_menu, 2, 1, 1, 1)
         self.layout_A1.addWidget(self.label_A2, 3, 1, 1, 1)
         self.layout_A1.setColumnStretch(2, 1)
         self.layout_A1.setRowStretch(4, 1)
@@ -118,23 +110,23 @@ class MainWindow(QMainWindow):
         #   Menú principal
         #       Acciones
         self.action_1A.setText("Salir")
-        self.action_1A.triggered.connect(self.salir)
+        self.action_1A.triggered.connect(self.exit_app)
 
         self.action_3A.setText("Pantalla completa")
         self.action_3A.setCheckable(True)
         self.action_3A.setChecked(False)
-        self.action_3A.toggled.connect(self.verPantallaCompleta)
+        self.action_3A.toggled.connect(self.toggle_fullscreen)
 
         self.action_3B.setText("Ver menú")
         self.action_3B.setCheckable(True)
         self.action_3B.setChecked(True)
-        self.action_3B.toggled.connect(lambda estado: self.menuBar.setVisible(estado))
+        self.action_3B.toggled.connect(lambda state: self.menu_bar.setVisible(state))
 
         self.action_4A.setText(f"Ayuda de {APP_NOMBRE}")
-        self.action_4A.triggered.connect(self.metodo_action_4A)
+        self.action_4A.triggered.connect(self.show_help_dialog)
 
         self.action_4B.setText(f"Acerca de {APP_NOMBRE}")
-        self.action_4B.triggered.connect(self.metodo_action_4B)
+        self.action_4B.triggered.connect(self.show_about_dialog)
 
         #       Menús
         self.menu_1.addAction(self.action_1A)
@@ -145,12 +137,12 @@ class MainWindow(QMainWindow):
         self.menu_4.addAction(self.action_4B)
 
         #       Disposición
-        self.menuBar.addMenu(self.menu_1)
-        self.menuBar.addMenu(self.menu_2)
-        self.menuBar.addMenu(self.menu_3)
-        self.menuBar.addMenu(self.menu_4)
+        self.menu_bar.addMenu(self.menu_1)
+        self.menu_bar.addMenu(self.menu_2)
+        self.menu_bar.addMenu(self.menu_3)
+        self.menu_bar.addMenu(self.menu_4)
 
-        self.menuBar.setStyleSheet("""
+        self.menu_bar.setStyleSheet("""
             QMenuBar {
                 background-color: black;
                 color: white;
@@ -163,80 +155,86 @@ class MainWindow(QMainWindow):
             """)
 
         #   Barra de estado
-        self.statusBar.setSizeGripEnabled(False)
-        self.statusBar.setStyleSheet("""background-color: black;""")
+        self.status_bar.setSizeGripEnabled(False)
+        self.status_bar.setStyleSheet("""background-color: black;""")
 
         # Disposición de pantallas
-        self.stackedWidget.addWidget(self.widget_A)
-        self.stackedWidget.addWidget(self.widget_B)
-        self.stackedWidget.addWidget(self.widget_BB)
-        self.stackedWidget.setStyleSheet("""background-color: black;""")
-        self.stackedWidget.setContentsMargins(0, 0, 0, 0)
-        self.setMenuBar(self.menuBar)
-        self.setStatusBar(self.statusBar)
-        self.setCentralWidget(self.stackedWidget)
+        self.stacked_widget.addWidget(self.widget_A)
+        self.stacked_widget.addWidget(self.widget_B)
+        self.stacked_widget.addWidget(self.widget_BB)
+        self.stacked_widget.setStyleSheet("""background-color: black;""")
+        self.stacked_widget.setContentsMargins(0, 0, 0, 0)
+        self.setMenuBar(self.menu_bar)
+        self.setStatusBar(self.status_bar)
+        self.setCentralWidget(self.stacked_widget)
 
-        # self.iniciarJuego()
+        # self.start_game()
     # Eventos y Métodos
-        self.navigationMenu.signalOpcionElegida.connect(self.navigationMenuOptions)
-        self.widget_B.signalRegistro.connect(self.registroJugadores)
-        self.widget_B.signalVolver.connect(lambda: self.stackedWidget.setCurrentWidget(self.widget_A))
-        self.widget_BB.signalAjustesRed.connect(self.ajustesRed)
-        self.widget_BB.signalVolver.connect(lambda: self.stackedWidget.setCurrentWidget(self.widget_B))
-        self.widget_BB.signalVolverInicio.connect(lambda: self.stackedWidget.setCurrentWidget(self.widget_A))
+        self.navigation_menu.signalOpcionElegida.connect(self.navigation_menu_options)
+        self.navigation_menu.signalOpcionElegida.connect(lambda: sound.click_button())
+        self.widget_B.signalRegistro.connect(self.register_players)
+        self.widget_B.signalRegistro.connect(lambda: sound.click_button())
+        self.widget_B.signalVolver.connect(lambda: self.stacked_widget.setCurrentWidget(self.widget_A))
+        self.widget_B.signalVolver.connect(lambda: sound.click_button())
+        self.widget_BB.signalAjustesRed.connect(self.network_settings)
+        self.widget_BB.signalAjustesRed.connect(lambda: sound.click_button())
+        self.widget_BB.signalVolver.connect(lambda: self.stacked_widget.setCurrentWidget(self.widget_B))
+        self.widget_BB.signalVolver.connect(lambda: sound.click_button())
+        self.widget_BB.signalVolverInicio.connect(lambda: self.stacked_widget.setCurrentWidget(self.widget_A))
+        self.widget_BB.signalVolverInicio.connect(lambda: sound.click_button())
 
-    def ajustesRed(self, ip, port):
+
+    def network_settings(self, ip, port):
         self.ip = ip
         self.port = port
-        self.statusBar.showMessage(f"Conectando a {ip}:{port}")
-        QTimer.singleShot(1000, lambda: self.statusBar.showMessage(f"Conectado a {ip}:{port}"))
-        QTimer.singleShot(2000, lambda: self.statusBar.showMessage(f"Ping: {self.leerPing()}"))
-        QTimer.singleShot(2500, self.iniciarJuego)
+        self.status_bar.showMessage(f"Conectando a {ip}:{port}")
+        QTimer.singleShot(1000, lambda: self.status_bar.showMessage(f"Conectado a {ip}:{port}"))
+        QTimer.singleShot(2000, lambda: self.status_bar.showMessage(f"Ping: {self.read_ping()}"))
+        QTimer.singleShot(2500, self.start_game)
 
-    def iniciarJuego(self):
-        from scenes.level_1 import Level1
+    def start_game(self):
+        from src.scenes.level1 import Level1
         self.widget_C = Level1()
         self.widget_C.setContentsMargins(0, 0, 0, 0)
-        self.widget_C.signalVolver.connect(lambda: self.stackedWidget.setCurrentWidget(self.widget_BB))
-        self.widget_C.signalVolverInicio.connect(lambda: self.stackedWidget.setCurrentWidget(self.widget_A))
+        self.widget_C.signal_back.connect(lambda: self.stacked_widget.setCurrentWidget(self.widget_BB))
+        self.widget_C.signal_back_init.connect(lambda: self.stacked_widget.setCurrentWidget(self.widget_A))
 
-        self.stackedWidget.addWidget(self.widget_C)
-        self.stackedWidget.setCurrentWidget(self.widget_C)
-        print("xd")
+        self.stacked_widget.addWidget(self.widget_C)
+        self.stacked_widget.setCurrentWidget(self.widget_C)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
-            self.menuBar.setVisible(True)
+            self.menu_bar.setVisible(True)
             self.action_3B.setChecked(True)
         if event.key() == Qt.Key.Key_F11:
             self.action_3A.toggle()
         else:
             super().keyPressEvent(event)
 
-    def verPantallaCompleta(self):
+    def toggle_fullscreen(self):
         if self.isFullScreen():
             self.showNormal()
         else:
             self.showFullScreen()
 
-    def leerPing(self):
+    def read_ping(self):
 # TODO: METODO SIMULADO FALTA COMPLETAR ================================================================================
         self.ping = 5
         print(self.ping)
         if self.ping >= 0 and self.ping <= 15:
-            self.estadoRed = "Excelente"
+            self.network_status = "Excelente"
         if self.ping >= 15 and self.ping <= 45:
-            self.estadoRed = "Bueno"
+            self.network_status = "Bueno"
         if self.ping >= 45 and self.ping <= 100:
-            self.estadoRed = "Aceptable"
+            self.network_status = "Aceptable"
         if self.ping >= 100 and self.ping <= 250:
-            self.estadoRed = "Acércate (al router)"
+            self.network_status = "Acércate (al router)"
         if self.ping >= 250:
-            self.estadoRed = "Desconéctate"
-        return self.estadoRed
+            self.network_status = "Desconéctate"
+        return self.network_status
 
     # Sección "Ayuda"
-    def metodo_action_4A(self):
+    def show_help_dialog(self):
         self.dialog = QDialog(self)
 
         self.dialog.setWindowTitle(f"Ayuda de {APP_NOMBRE}")
@@ -264,11 +262,11 @@ class MainWindow(QMainWindow):
 
         self.label_3 = QLabel(f"<b>Navegación</b>"
                               f"<br><br>"
-                              f"(↑) <b>Flecha arriba</b>. Mover hacia arriba"
+                              f"(↑) <b>Flecha arriba</b>. Mover hacia arriba."
                               f"<br><br>"
-                              f"(↓) <b>Flecha abajo</b>. Mover hacia abajo"
+                              f"(↓) <b>Flecha abajo</b>. Mover hacia abajo."
                               f"<br><br>"
-                              f"(↵) <b>Enter</b>. Seleccionar opción"
+                              f"(↵) <b>Enter</b>. Seleccionar opción."
         )
         self.label_4 = QLabel(f"<b>Atajos del teclado</b>"
                               f"<br><br>"
@@ -315,12 +313,12 @@ class MainWindow(QMainWindow):
         self.dialog.show()
 
     # Sección "Acerca de"
-    def metodo_action_4B(self):
-        messageBox = QMessageBox()
+    def show_about_dialog(self):
+        message_box = QMessageBox()
 
-        messageBox.setWindowTitle(f"Acerca de {APP_NOMBRE}")
-        messageBox.setWindowIcon(QIcon(APP_ICON))
-        messageBox.setText(
+        message_box.setWindowTitle(f"Acerca de {APP_NOMBRE}")
+        message_box.setWindowIcon(QIcon(APP_ICON))
+        message_box.setText(
             f"<b>{APP_NOMBRE}</b>"
             f"<br><br>"
             f"{APP_NOMBRE} es un videojuego de plataformas basado en Donkey Kong (1981), el clásico arcade de Nintendo "
@@ -328,7 +326,7 @@ class MainWindow(QMainWindow):
             f"<br><br>"
             f"Desarrollado por Axel C., Estrella R. y Karen R."
         )
-        messageBox.setStyleSheet("""color: black;""")
+        message_box.setStyleSheet("""color: black;""")
 
         pixmap = QPixmap(APP_ICON_PNG)
         pixmap = pixmap.scaled(
@@ -337,28 +335,28 @@ class MainWindow(QMainWindow):
             Qt.TransformationMode.FastTransformation
         )
 
-        messageBox.setIconPixmap(pixmap)
-        messageBox.setStandardButtons(QMessageBox.Ok)
+        message_box.setIconPixmap(pixmap)
+        message_box.setStandardButtons(QMessageBox.Ok)
 
-        messageBox.exec()
+        message_box.exec()
 
-    def navigationMenuOptions(self, indice):
-        if indice == 0:
-            self.stackedWidget.setCurrentWidget(self.widget_B)
-            print(f"[Alerta] Falta el método de la opción {indice}")
-        elif indice == 1:
-            #self.stackedWidget.setCurrentIndex(self.widget_C)
-            print(f"[Alerta] Falta el método de la opción {indice}")
-        elif indice == 2:
-            self.salir()
+    def navigation_menu_options(self, index):
+        if index == 0:
+            self.stacked_widget.setCurrentWidget(self.widget_B)
+            print(f"[Alerta] Falta el método de la opción {index}")
+        elif index == 1:
+            #self.stacked_widget.setCurrentIndex(self.widget_C)
+            print(f"[Alerta] Falta el método de la opción {index}")
+        elif index == 2:
+            self.exit_app()
 
-    def registroJugadores(self, j1):
-        self.j1 = j1
+    def register_players(self, p1):
+        self.p1 = p1
         print("Registro:")
-        print(f"Jugador 1: {j1}")
-        self.stackedWidget.setCurrentWidget(self.widget_BB)
+        print(f"Jugador 1: {p1}")
+        self.stacked_widget.setCurrentWidget(self.widget_BB)
 
-    def salir(self):
+    def exit_app(self):
         # TODO: FALTA CERRAR DE FORMA SEGURA (GUARDAR/DESCARTAR CAMBIOS) ===============================================
         sys.exit()
 
@@ -370,6 +368,12 @@ if __name__ == "__main__":
     palette.setColor(QPalette.ColorRole.WindowText, QColor("white"))
     app.setPalette(palette)
 
+    # Música
+    audio = Sound()
+    audio.background()
+    sound = Sound()
+
     window = MainWindow()
+    window.audio = audio
     window.show()
     app.exec()
