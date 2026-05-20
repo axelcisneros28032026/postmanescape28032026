@@ -317,3 +317,360 @@ class Level1(QWidget):
         self.pushButton_back.clicked.connect(lambda: sound.click_button())
         self.pushButton_back_init.clicked.connect(lambda: self.signal_back_init.emit())
         self.pushButton_back_init.clicked.connect(lambda: sound.click_button())
+
+
+# ======================================================================================================================
+# Hilo principal
+    def game_loop(self):
+        self.player_gravity_speed = self.player_gravity_speed_initial
+
+        self.player_speed = self.player.speed
+
+        self.player_coll_escalera = None
+        self.player_coll_platform = None
+        self.player_move_horizontal_lock = False
+        self.player_move_walk_left_lock = False
+        self.player_move_walk_right_lock = False
+
+        if not self.player_scaling_state:
+            self.player_move_climb_lock = True
+            self.player_move_climb_up_lock = True
+            self.player_move_climb_down_lock = True
+
+        if not self.player_scaling_state and not self.player_jumping_state:
+            self.player_gravity_toggle = True
+
+        # Rectángulo del jugador en coordenadas de escena
+        player_rect = self.player.mapToScene(self.player.boundingRect()).boundingRect()
+
+        self.player_x = player_rect.left()
+        self.player_x2 = player_rect.right()
+        self.player_y = player_rect.top()
+        self.player_y2 = player_rect.bottom()
+
+
+        # Rectángulo del enemigo en coordenadas de escena
+        enemy_rect = self.enemy.mapToScene(self.enemy.boundingRect()).boundingRect()
+
+        self.enemy_x = enemy_rect.left()
+        self.enemy_x2 = enemy_rect.right()
+        self.enemy_y = enemy_rect.top()
+        self.enemy_y2 = enemy_rect.bottom()
+
+        self.camera_x = self.scene_width / 2
+
+# ======================================================================================================================
+# Lógica del jugador
+        if self.rol == "player":
+            self.view.centerOn(self.camera_x, self.player.scenePos().y())
+    # Colisiones
+        # Detección
+            for item in self.player.collidingItems():
+                if isinstance(item, Ladders):
+                    self.player_coll_escalera = item
+                    escalera_rect = item.mapToScene(item.boundingRect()).boundingRect()
+
+                    self.escalera_x = escalera_rect.left()
+                    self.escalera_x2 = escalera_rect.right()
+                    self.escalera_y = escalera_rect.top()
+                    self.escalera_y2 = escalera_rect.bottom()
+
+                if isinstance(item, Platforms):
+                    self.player_coll_platform = item
+                    platform_rect = item.mapToScene(item.boundingRect()).boundingRect()
+
+                    self.platform_x = platform_rect.left()
+                    self.platform_x2 = platform_rect.right()
+                    self.platform_y = platform_rect.top()
+                    self.platform_y2 = platform_rect.bottom()
+
+            for platform in self.scene.items():
+                if isinstance(platform, Platforms):
+                    platform_area1 = platform.mapToScene(QPolygonF(platform.area1())).boundingRect()
+                    self.platform_area1_x = platform_area1.left()
+                    self.platform_area1_x2 = platform_area1.right()
+                    self.platform_area1_y = platform_area1.top()
+                    self.platform_area1_y2 = platform_area1.bottom()
+
+                    if platform_area1.intersects(player_rect):
+                        self.player_coll_platform_area1 = True
+                        if self.player_y2 <= self.platform_area1_y2:
+                            self.player_gravity_speed = 1
+                    else:
+                        self.player_coll_platform_area1 = False
+
+        # 1.1 Colisión con platforms
+            if self.player_coll_platform:
+                if (self.platform_y + self.platform_y_tolerance >= self.player_y2 >= self.platform_y -
+                        self.platform_y_tolerance):
+                    self.player_move_jump_lock = False
+
+                # Salto
+                if self.player_y >= self.platform_y2:
+                    self.player_gravity_jump_speed = 0
+                    self.player_jumping_state = False
+                # Plataforma debajo del jugador
+                if self.player_y2 <= self.platform_y + self.platform_y_tolerance and self.player_y < self.platform_y:
+                    self.player_gravity_toggle = False
+                    self.player_jumping_state = False
+                    self.player_gravity_jump_speed = self.player_gravity_jump_speed_initial
+                    if not self.player_move_walk_left and not self.player_move_walk_right:
+                        self.player.set_direction("idle")
+                # Plataforma lateral al jugador
+                elif self.player_y2 > self.platform_y2:
+                    if self.player_y2 > self.platform_y2 + self.platform_y_tolerance:
+                        if self.player_x2 >= self.platform_x:
+                            self.player_move_walk_right_lock = True
+                        if self.player_x <= self.platform_x2:
+                            self.player_move_walk_left_lock = True
+
+        # 1.2 Colisión con escaleras
+            if self.player_coll_escalera:
+                self.player_move_climb_lock = False
+                if self.player_move_climb_up or self.player_move_climb_down:
+                    self.player_scaling_state = True
+                    self.player_gravity_toggle = False
+            else:
+                self.player_move_climb_lock = True
+                self.player_scaling_state = False
+
+        # 2. Colisión con platforms y escaleras
+            if self.player_coll_platform and self.player_coll_escalera:
+                self.player_move_climb_lock = False
+                if self.player_y2 <= self.escalera_y:
+                    self.player_move_climb_up_lock = True
+                else:
+                    self.player_move_climb_up_lock = False
+                if self.player_y2 > self.escalera_y + 1 and self.player_y < self.escalera_y:
+                    self.player_move_horizontal_lock = True
+                else:
+                    self.player_move_horizontal_lock = False
+
+                if self.player_y2 >= self.escalera_y2:
+                    self.player_move_climb_down_lock = True
+                    self.player_jumping_state = False
+                else:
+                    self.player_move_climb_down_lock = False
+
+# ----------------------------------------------------------------------------------------------------------------------
+# PowerUps
+    # Regeneración
+    # Inmunidad
+            self.label_life.setText(f"❤️ {self.player_life_current}")
+            self.label_regeneration.setText(f"️⚕️ {self.player_regeneration_current} s")
+            self.label_immunity.setText(f"️🛡️ {self.player_immunity_current} s")
+            self.label_run.setText(f"️🏃 {self.player_run_current} s")
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Movimientos
+    # Movimiento horizontal
+            if not self.player_move_horizontal_lock:
+        # Izquierda
+                if self.player_move_walk_left and self.player_move_walk_left_lock == False:
+                    if self.player_run_status and self.player_run_toggle:
+                        # PowerUp Velocidad
+                        self.player.moveBy(-self.player_speed * 2, 0)
+                        self.player.set_direction("run_left")
+                    else:
+                        self.player.moveBy(-self.player_speed, 0)
+                        self.player.set_direction("left")
+        # Derecha
+                if self.player_move_walk_right and self.player_move_walk_right_lock == False:
+                    if self.player_run_status and self.player_run_toggle:
+                        # PowerUp Velocidad
+                        self.player.moveBy(self.player_speed * 2, 0)
+                        self.player.set_direction("run_right")
+                    else:
+                        self.player.moveBy(self.player_speed, 0)
+                        self.player.set_direction("right")
+
+    # Escalado
+            if not self.player_move_climb_lock:
+        # Ascendente
+                if not self.player_move_climb_up_lock:
+                    if self.player_move_climb_up:
+                        self.player.moveBy(0, -self.player_speed)
+                        self.player.set_direction("climb_up")
+        # Descendente
+                if not self.player_move_climb_down_lock:
+                    if self.player_move_climb_down:
+                        self.player.moveBy(0, self.player_speed)
+                        self.player.set_direction("climb_down")
+            if self.player_scaling_state:
+                self.player_gravity_toggle = False
+
+    # Salto
+            if not self.player_move_jump_lock and not self.player_scaling_state:
+                tipo = None
+                if self.player_move_jump_left:
+                    tipo = "left"
+                elif self.player_move_jump_right:
+                    tipo = "right"
+                elif self.player_move_jump_up:
+                    tipo = "up"
+
+                if tipo:
+                    self.player_move_jump_last = tipo
+                    self.player_move_jump_up = False
+                    self.player_move_jump_left = False
+                    self.player_move_jump_right = False
+                    self.player_jumping_state = True
+                    self.player_move_jump_lock = True
+                    self.player_gravity_jump_speed = self.player_gravity_jump_speed_initial
+                    self.player_gravity_toggle = False
+
+            if self.player_jumping_state:
+                if self.player_move_jump_last == "up":
+                    self.player.set_direction("jump_up")
+                    self.player.moveBy(0, -self.player_gravity_jump_speed)
+                elif self.player_move_jump_last == "left":
+                    self.player.set_direction("jump_left")
+                    self.player.moveBy(-self.player_gravity_jump_speed * 1.25, -self.player_gravity_jump_speed * 0.75)
+                elif self.player_move_jump_last == "right":
+                    self.player.set_direction("jump_right")
+                    self.player.moveBy(self.player_gravity_jump_speed * 1.25, -self.player_gravity_jump_speed * 0.75)
+
+                # Ajuste para que dure más
+                self.player_gravity_jump_speed -= 0.25  # antes era 1
+
+                self.player._anim_speed = int(self.player_gravity_jump_speed * 0.01)
+
+                if self.player_gravity_jump_speed <= 0:
+                    self.player_jumping_state = False
+                    self.player_gravity_toggle = True
+                    self.player._anim_speed = 4
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Gravedad
+        if self.player_gravity_toggle:
+            if self.player_jumping_state:
+                self.i_player_damage_fall_accumulated -= self.player_gravity_jump_speed * 0.75
+            if not self.player_jumping_state:
+                print("NO ESTA SALTANDO")
+                self.player.moveBy(0, self.player_gravity_speed)
+                self.i_player_damage_fall_accumulated += self.player_gravity_speed
+                if self.i_player_damage_fall_accumulated >= self.platform_separation:
+                    self.i_player_damage_fall_accumulated = 0
+                    self.player_damage_fall_accumulated += 1
+
+        else:
+            if self.player_damage_fall_accumulated >= 0:
+                self.damage_management(player_damage_fall_accumulated_arg = self.player_damage_fall_accumulated)
+            self.i_player_damage_fall_accumulated = 0
+
+
+        if self.player_life_current <= 0:
+            print("JUGADOR MUERTO (FALTA MÉTODO PARA EL ESTADO DE MUERTE DEL JUGADOR)")
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Debug
+        if self.show_collisions_toggle:
+            self.show_collisions_dynamic()
+# ======================================================================================================================
+
+# ======================================================================================================================
+# Controles
+    def keyPressEvent(self, event):
+        key = event.key()
+        self.multiple_keys.add(key)
+
+        if key == Qt.Key_D:
+            print("self.platforms_separation", self.platform_separation)
+            print("self.i_player_damage_fall_accumulated", self.i_player_damage_fall_accumulated)
+            pass
+
+        if key == Qt.Key_H:
+            if self.rol == "player":
+                self.player.moveBy(0, -256)
+
+        if key == Qt.Key_Left:
+            if self.rol == "player":
+                self.player_move_walk_left = True
+
+        if key == Qt.Key_Right:
+            if self.rol == "player":
+                self.player_move_walk_right = True
+
+        if key == Qt.Key_Up:
+            if self.rol == "player":
+                self.player_move_climb_up = True
+
+        if key == Qt.Key_Down:
+            if self.rol == "player":
+                self.player_move_climb_down = True
+
+        if Qt.Key_Space in self.multiple_keys:
+            if self.rol == "player":
+                self.player_move_jump_up = False
+                self.player_move_jump_left = False
+                self.player_move_jump_right = False
+
+                if Qt.Key_Left in self.multiple_keys:
+                    self.player_move_jump_left = True
+                elif Qt.Key_Right in self.multiple_keys:
+                    self.player_move_jump_right = True
+                else:
+                    self.player_move_jump_up = True
+
+        if key == Qt.Key_E:
+            if self.rol == "player":
+                if not self.player_immunity_lock:
+                    self.power_up_immunity()
+
+        if key == Qt.Key_R:
+            if self.rol == "player":
+                if not self.player_regeneration_lock:
+                    self.power_up_regeneration()
+
+        if key == Qt.Key_Control:
+            if self.rol == "player":
+                if self.player_run_status:
+                    self.player_run_toggle = not self.player_run_toggle
+
+                if not self.player_run_lock:
+                    self.power_up_run()
+
+        if Qt.Key_B in self.multiple_keys and Qt.Key_F3 in self.multiple_keys:
+            self.method_show_collisions_toggle()
+
+    def keyReleaseEvent(self, event):
+        key = event.key()
+        self.multiple_keys.discard(key)
+
+        if key == Qt.Key_Left:
+            if self.rol == "player":
+                self.player_move_walk_left = False
+
+        elif key == Qt.Key_Right:
+            if self.rol == "player":
+                self.player_move_walk_right = False
+
+        elif key == Qt.Key_Space:
+            if self.rol == "player":
+                self.player_move_jump_up = False
+                self.player_move_jump_left = False
+                self.player_move_jump_right = False
+
+        elif key == Qt.Key_Up:
+            if self.rol == "player":
+                self.player_move_climb_up = False
+
+        elif key == Qt.Key_Down:
+            if self.rol == "player":
+                self.player_move_climb_down = False
+
+        elif key == Qt.Key_R:
+            if self.rol == "player":
+                self.player_powerup_immunity = False
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+# Ejecución
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = Level1()
+
+    window.show()
+    app.exec()
+# ======================================================================================================================
