@@ -49,7 +49,7 @@ class Level1(QWidget):
 
         # Rol de juego
         self.rol = "player" # Rol establecido en jugador
-        #self.rol = "enemy" # Rol establecido en enemigo
+        self.rol = "enemy" # Rol establecido en enemigo
 
         # ==============================================================================================================
         # Jugador
@@ -142,6 +142,97 @@ class Level1(QWidget):
         # --------------------------------------------------------------------------------------------------------------
         # ==============================================================================================================
 
+        # ==============================================================================================================
+        # Jugador
+        self.enemy_anim_speed = 4  # Velocidad de animaciones
+        self.enemy_life_initial = 10  # Vida inicial (unidades)
+        self.enemy_life_current = self.enemy_life_initial  # Vida actual
+
+        # --------------------------------------------------------------------------------------------------------------
+        # Daños
+        self.enemy_damage_receiving_status = False  # Estado de daño recibido
+        self.enemy_damage_fall_accumulated = 0  # Daño acumulado por caída del jugador
+        self.i_enemy_damage_fall_accumulated = 0  # Iterador auxiliar que contabiliza los píxeles que ha caído el jugador
+        # --------------------------------------------------------------------------------------------------------------
+
+        # --------------------------------------------------------------------------------------------------------------
+        # Potenciadores:
+        # Aceleración
+        self.enemy_run_initial = 5  # Tiempo de aceleración inicial
+        self.enemy_run_current = self.enemy_run_initial  # Tiempo de aceleración actual (segundos)
+        self.enemy_run_cooldown = 8  # Tiempo de espera para reactivar la aceleración (segundos)
+        self.enemy_run_counter = 0  # Contador de la aceleración
+        self.enemy_run_status = False  # Estado de aceleración
+        self.enemy_run_toggle = False  # Interruptor de aceleración
+        self.enemy_run_lock = False  # Bloqueo de aceleración
+        self.enemy_run_timer = QTimer(timeout=self.power_up_run)  # Contador de aceleración
+
+        # Regeneración
+        self.enemy_regeneration_initial = 3  # Tiempo de regeneración inicial (segundos)
+        self.enemy_regeneration_current = self.enemy_regeneration_initial  # Tiempo de regeneración actual
+        self.enemy_regeneration_cooldown = 5  # Tiempo de espera para reactivar la regeneración (segundos)
+        self.enemy_regeneration_counter = 0  # Contador de la regeneración
+        self.enemy_regeneration_status = False  # Estado de regeneración
+        self.enemy_regeneration_lock = False  # Bloqueo de regeneración
+        self.enemy_regeneration_timer = QTimer(timeout=self.power_up_regeneration)  # Contador de regeneración
+
+        # Inmunidad
+        self.enemy_immunity_initial = 3  # Tiempo de inmunidad inicial (segundos)
+        self.enemy_immunity_current = self.enemy_immunity_initial  # Tiempo de inmunidad actual
+        self.enemy_immunity_cooldown = 5  # Tiempo de espera para reactivar la inmunidad (segundos)
+        self.enemy_immunity_counter = 0  # Contador de la inmunidad
+        self.enemy_immunity_status = False  # Estado de inmunidad
+        self.enemy_immunity_lock = False  # Bloqueo de inmunidad
+        self.enemy_immunity_timer = QTimer(timeout=self.power_up_immunity)  # Contador de inmunidad
+        # --------------------------------------------------------------------------------------------------------------
+
+        # --------------------------------------------------------------------------------------------------------------
+        # Movimiento
+        self.enemy_speed = 3  # Velocidad del jugador
+
+        #   Gravedad
+        self.enemy_gravity_toggle = True  # Interruptor de gravedad
+        self.enemy_gravity_speed_initial = 5  # Velocidad de gravedad inicial
+        self.enemy_gravity_speed = self.enemy_gravity_speed_initial  # Velocidad de gravedad
+        self.enemy_gravity_jump_speed_initial = self.enemy_gravity_speed_initial  # Velocidad de la gravedad de salto inicial
+        self.enemy_gravity_jump_speed = self.enemy_gravity_jump_speed_initial  # Velocidad de la gravedad de salto
+
+        #   Horizontal
+        self.enemy_move_horizontal_lock = False  # Bloqueo de movimiento horizontal general
+        self.enemy_move_walk_left_lock = False  # Bloqueo de movimiento horizontal a la izquierda
+        self.enemy_move_walk_right_lock = False  # Bloqueo de movimiento horizontal a la derecha
+
+        self.enemy_move_walk_left = False  # Movimiento horizontal a la izquierda
+        self.enemy_move_walk_right = False  # Movimiento horizontal a la derecha
+
+        #   Saltar
+        self.enemy_move_jump_lock = False  # Bloqueo de salto general
+        self.enemy_move_jump_up_lock = False  # Bloqueo de salto vertical
+
+        self.enemy_move_jump_up = False  # Salto vertical
+        self.enemy_move_jump_left = False  # Salto vertical a la izquierda
+        self.enemy_move_jump_right = False  # Salto vertical a la derecha
+
+        self.enemy_move_jump_last = None  # Tipo último de salto
+
+        #   Escalar
+        self.enemy_move_climb_lock = True  # Bloqueo de escalado general
+        self.enemy_move_climb_up_lock = True  # Bloqueo de escalado hacia arriba
+        self.enemy_move_climb_down_lock = False  # Bloqueo de escalado hacia abajo
+
+        self.enemy_move_climb_up = False  # Escalado hacia arriba
+        self.enemy_move_climb_down = False  # Escalado hacia abajo
+
+        #   Estados
+        self.enemy_scaling_state = False  # Estado de escalado
+        self.enemy_jumping_state = False  # Estado de salto
+
+        # Colisiones
+        self.enemy_coll_escalera = False  # Estado de colisión con escalera
+        self.enemy_coll_platform = False  # Estado de colisión con platform
+        # --------------------------------------------------------------------------------------------------------------
+        # ==============================================================================================================
+
         # --------------------------------------------------------------------------------------------------------------
         # Temporizadores
 
@@ -154,6 +245,10 @@ class Level1(QWidget):
         self.player_damage_timer = QTimer()
         self.player_damage_timer.setSingleShot(True)
         self.player_damage_timer.timeout.connect(self.damage_management_aux)
+
+        self.enemy_damage_timer = QTimer()
+        self.enemy_damage_timer.setSingleShot(True)
+        self.enemy_damage_timer.timeout.connect(self.damage_management_aux)
         # --------------------------------------------------------------------------------------------------------------
 
         # Puntuaciones altas
@@ -162,20 +257,36 @@ class Level1(QWidget):
         self.enemy_points = 0 # Puntos del enemigo
 
         # Visualización de datos
-        self.label = QLabel(f"I - {self.player_points}")
-        self.label.setAlignment(Qt.AlignCenter)
-        self.label_2 = QLabel(f"Top - {self.players_top}")
-        self.label_2.setAlignment(Qt.AlignCenter)
-        self.label_3 = QLabel(f"II - {self.enemy_points}")
-        self.label_3.setAlignment(Qt.AlignCenter)
-        self.label_life = QLabel(f"❤️ {self.player_life_current}")
-        self.label_life.setAlignment(Qt.AlignLeft)
-        self.label_regeneration = QLabel(f"️⚕️ {self.player_regeneration_current} s")
-        self.label_regeneration.setAlignment(Qt.AlignLeft)
-        self.label_immunity = QLabel(f"️🛡️ {self.player_immunity_current} s")
-        self.label_immunity.setAlignment(Qt.AlignLeft)
-        self.label_run = QLabel(f"️🏃 {self.player_run_current} s")
-        self.label_run.setAlignment(Qt.AlignLeft)
+        if self.rol == "player":
+            self.label = QLabel(f"I - {self.player_points}")
+            self.label.setAlignment(Qt.AlignCenter)
+            self.label_2 = QLabel(f"Top - {self.players_top}")
+            self.label_2.setAlignment(Qt.AlignCenter)
+            self.label_3 = QLabel(f"II - {self.enemy_points}")
+            self.label_3.setAlignment(Qt.AlignCenter)
+            self.label_life = QLabel(f"❤️ {self.player_life_current}")
+            self.label_life.setAlignment(Qt.AlignLeft)
+            self.label_regeneration = QLabel(f"️⚕️ {self.player_regeneration_current} s")
+            self.label_regeneration.setAlignment(Qt.AlignLeft)
+            self.label_immunity = QLabel(f"️🛡️ {self.player_immunity_current} s")
+            self.label_immunity.setAlignment(Qt.AlignLeft)
+            self.label_run = QLabel(f"️🏃 {self.player_run_current} s")
+            self.label_run.setAlignment(Qt.AlignLeft)
+        if self.rol == "enemy":
+            self.label = QLabel(f"I - {self.player_points}")
+            self.label.setAlignment(Qt.AlignCenter)
+            self.label_2 = QLabel(f"Top - {self.players_top}")
+            self.label_2.setAlignment(Qt.AlignCenter)
+            self.label_3 = QLabel(f"II - {self.enemy_points}")
+            self.label_3.setAlignment(Qt.AlignCenter)
+            self.label_life = QLabel(f"❤️ {self.enemy_life_current}")
+            self.label_life.setAlignment(Qt.AlignLeft)
+            self.label_regeneration = QLabel(f"️⚕️ {self.enemy_regeneration_current} s")
+            self.label_regeneration.setAlignment(Qt.AlignLeft)
+            self.label_immunity = QLabel(f"️🛡️ {self.enemy_immunity_current} s")
+            self.label_immunity.setAlignment(Qt.AlignLeft)
+            self.label_run = QLabel(f"️🏃 {self.enemy_run_current} s")
+            self.label_run.setAlignment(Qt.AlignLeft)
 
         # Construcción de escena
         self.scene_width = 1280
@@ -188,7 +299,7 @@ class Level1(QWidget):
 
         self.enemy = Enemy(speed = 5, anim_speed = int(1000 / self.frequency * 0.075))
         self.victim = Victim(speed = 5, anim_speed = int(1000 / self.frequency * 0.075))
-        self.player = Player(speed = self.player_speed, anim_speed = int(1000 / self.frequency * 0.075))
+        self.player = Player(speed = self.player_speed, anim_speed = int(1000 / self.frequency * 0.115))
 
         # Edición de componentes
         self.victim.setZValue(8)
@@ -508,7 +619,8 @@ class Level1(QWidget):
             self.player_regeneration_lock = True
             self.player_regeneration_status = True
             self.label_life.setStyleSheet("""QLabel { color: green; }""")
-            self.player_life_current += 1
+            if self.player_life_current < self.player_life_initial:
+                self.player_life_current += 1
             self.player_regeneration_counter = self.player_regeneration_initial
             self.player_regeneration_current = self.player_regeneration_counter
             self.player_regeneration_timer.start(1000)
@@ -520,7 +632,8 @@ class Level1(QWidget):
         if self.player_regeneration_status:
             self.label_life.setStyleSheet("""QLabel { color: green; }""")
             if self.player_regeneration_counter >= 1:
-                self.player_life_current += 1
+                if self.player_life_current < self.player_life_initial:
+                    self.player_life_current += 1
             # Finalizar Power-Up
             if self.player_regeneration_counter <= 0:
                 self.player_regeneration_status = False
@@ -663,7 +776,7 @@ class Level1(QWidget):
         self.camera_x = self.scene_width / 2
 
 # ======================================================================================================================
-# Lógica del jugador
+# Lógica principal
         if self.rol == "player":
             self.view.centerOn(self.camera_x, self.player.scenePos().y())
     # Colisiones
@@ -687,6 +800,13 @@ class Level1(QWidget):
                     self.platform_y = platform_rect.top()
                     self.platform_y2 = platform_rect.bottom()
 
+                if isinstance(item, Coins):
+                    self.scene.removeItem(item)
+                    self.player_points += 1
+
+                if isinstance(item, Victim):
+                    print("¡Jugador ha ganado!")
+
             for platform in self.scene.items():
                 if isinstance(platform, Platforms):
                     platform_area1 = platform.mapToScene(QPolygonF(platform.area1())).boundingRect()
@@ -701,6 +821,7 @@ class Level1(QWidget):
                             self.player_gravity_speed = 1
                     else:
                         self.player_coll_platform_area1 = False
+
 
         # 1.1 Colisión con platforms
             if self.player_coll_platform:
@@ -828,10 +949,10 @@ class Level1(QWidget):
                     self.player.moveBy(0, -self.player_gravity_jump_speed)
                 elif self.player_move_jump_last == "left":
                     self.player.set_direction("jump_left")
-                    self.player.moveBy(-self.player_gravity_jump_speed * 1.25, -self.player_gravity_jump_speed * 0.75)
+                    self.player.moveBy(-self.player_gravity_jump_speed * 1.1, -self.player_gravity_jump_speed * 0.75)
                 elif self.player_move_jump_last == "right":
                     self.player.set_direction("jump_right")
-                    self.player.moveBy(self.player_gravity_jump_speed * 1.25, -self.player_gravity_jump_speed * 0.75)
+                    self.player.moveBy(self.player_gravity_jump_speed * 1.1, -self.player_gravity_jump_speed * 0.75)
 
                 # Ajuste para que dure más
                 self.player_gravity_jump_speed -= 0.25  # antes era 1
@@ -845,31 +966,250 @@ class Level1(QWidget):
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Gravedad
-        if self.player_gravity_toggle:
-            if self.player_jumping_state:
-                self.i_player_damage_fall_accumulated -= self.player_gravity_jump_speed * 0.75
-            if not self.player_jumping_state:
-                print("NO ESTA SALTANDO")
-                self.player.moveBy(0, self.player_gravity_speed)
-                self.i_player_damage_fall_accumulated += self.player_gravity_speed
-                if self.i_player_damage_fall_accumulated >= self.platform_separation:
-                    self.i_player_damage_fall_accumulated = 0
-                    self.player_damage_fall_accumulated += 1
+            if self.player_gravity_toggle:
+                if self.player_jumping_state:
+                    self.i_player_damage_fall_accumulated -= self.player_gravity_jump_speed * 0.75
+                if not self.player_jumping_state:
+                    print("NO ESTA SALTANDO")
+                    self.player.moveBy(0, self.player_gravity_speed)
+                    self.i_player_damage_fall_accumulated += self.player_gravity_speed
+                    if self.i_player_damage_fall_accumulated >= self.platform_separation:
+                        self.i_player_damage_fall_accumulated = 0
+                        self.player_damage_fall_accumulated += 1
 
-        else:
-            if self.player_damage_fall_accumulated >= 0:
-                self.damage_management(player_damage_fall_accumulated_arg = self.player_damage_fall_accumulated)
-            self.i_player_damage_fall_accumulated = 0
+            else:
+                if self.player_damage_fall_accumulated >= 0:
+                    self.damage_management(player_damage_fall_accumulated_arg = self.player_damage_fall_accumulated)
+                self.i_player_damage_fall_accumulated = 0
 
 
-        if self.player_life_current <= 0:
-            print("JUGADOR MUERTO (FALTA MÉTODO PARA EL ESTADO DE MUERTE DEL JUGADOR)")
+            if self.player_life_current <= 0:
+                print("JUGADOR MUERTO (FALTA MÉTODO PARA EL ESTADO DE MUERTE DEL JUGADOR)")
+
+# ======================================================================================================================
+
+        # ======================================================================================================================
+        # Lógica principal
+        if self.rol == "enemy":
+            self.view.centerOn(self.camera_x, self.enemy.scenePos().y())
+            # Colisiones
+            # Detección
+            for item in self.enemy.collidingItems():
+                if isinstance(item, Ladders):
+                    self.enemy_coll_escalera = item
+                    escalera_rect = item.mapToScene(item.boundingRect()).boundingRect()
+
+                    self.escalera_x = escalera_rect.left()
+                    self.escalera_x2 = escalera_rect.right()
+                    self.escalera_y = escalera_rect.top()
+                    self.escalera_y2 = escalera_rect.bottom()
+
+                if isinstance(item, Platforms):
+                    self.enemy_coll_platform = item
+                    platform_rect = item.mapToScene(item.boundingRect()).boundingRect()
+
+                    self.platform_x = platform_rect.left()
+                    self.platform_x2 = platform_rect.right()
+                    self.platform_y = platform_rect.top()
+                    self.platform_y2 = platform_rect.bottom()
+
+                if isinstance(item, Coins):
+                    self.scene.removeItem(item)
+                    self.enemy_points += 1
+
+                if isinstance(item, Victim):
+                    print("¡Jugador ha ganado!")
+
+            for platform in self.scene.items():
+                if isinstance(platform, Platforms):
+                    platform_area1 = platform.mapToScene(QPolygonF(platform.area1())).boundingRect()
+                    self.platform_area1_x = platform_area1.left()
+                    self.platform_area1_x2 = platform_area1.right()
+                    self.platform_area1_y = platform_area1.top()
+                    self.platform_area1_y2 = platform_area1.bottom()
+
+                    if platform_area1.intersects(enemy_rect):
+                        self.enemy_coll_platform_area1 = True
+                        if self.enemy_y2 <= self.platform_area1_y2:
+                            self.enemy_gravity_speed = 1
+                    else:
+                        self.enemy_coll_platform_area1 = False
+
+            # 1.1 Colisión con platforms
+            if self.enemy_coll_platform:
+                if (self.platform_y + self.platform_y_tolerance >= self.enemy_y2 >= self.platform_y -
+                        self.platform_y_tolerance):
+                    self.enemy_move_jump_lock = False
+
+                # Salto
+                if self.enemy_y >= self.platform_y2:
+                    self.enemy_gravity_jump_speed = 0
+                    self.enemy_jumping_state = False
+                # Plataforma debajo del jugador
+                if self.enemy_y2 <= self.platform_y + self.platform_y_tolerance and self.enemy_y < self.platform_y:
+                    self.enemy_gravity_toggle = False
+                    self.enemy_jumping_state = False
+                    self.enemy_gravity_jump_speed = self.enemy_gravity_jump_speed_initial
+                    if not self.enemy_move_walk_left and not self.enemy_move_walk_right:
+                        self.enemy.set_direction("idle")
+                # Plataforma lateral al jugador
+                elif self.enemy_y2 > self.platform_y2:
+                    if self.enemy_y2 > self.platform_y2 + self.platform_y_tolerance:
+                        if self.enemy_x2 >= self.platform_x:
+                            self.enemy_move_walk_right_lock = True
+                        if self.enemy_x <= self.platform_x2:
+                            self.enemy_move_walk_left_lock = True
+
+            # 1.2 Colisión con escaleras
+            if self.enemy_coll_escalera:
+                self.enemy_move_climb_lock = False
+                if self.enemy_move_climb_up or self.enemy_move_climb_down:
+                    self.enemy_scaling_state = True
+                    self.enemy_gravity_toggle = False
+            else:
+                self.enemy_move_climb_lock = True
+                self.enemy_scaling_state = False
+
+            # 2. Colisión con platforms y escaleras
+            if self.enemy_coll_platform and self.enemy_coll_escalera:
+                self.enemy_move_climb_lock = False
+                if self.enemy_y2 <= self.escalera_y:
+                    self.enemy_move_climb_up_lock = True
+                else:
+                    self.enemy_move_climb_up_lock = False
+                if self.enemy_y2 > self.escalera_y + 1 and self.enemy_y < self.escalera_y:
+                    self.enemy_move_horizontal_lock = True
+                else:
+                    self.enemy_move_horizontal_lock = False
+
+                if self.enemy_y2 >= self.escalera_y2:
+                    self.enemy_move_climb_down_lock = True
+                    self.enemy_jumping_state = False
+                else:
+                    self.enemy_move_climb_down_lock = False
+
+            # ----------------------------------------------------------------------------------------------------------------------
+            # PowerUps
+            # Regeneración
+            # Inmunidad
+            self.label_life.setText(f"❤️ {self.enemy_life_current}")
+            self.label_regeneration.setText(f"️⚕️ {self.enemy_regeneration_current} s")
+            self.label_immunity.setText(f"️🛡️ {self.enemy_immunity_current} s")
+            self.label_run.setText(f"️🏃 {self.enemy_run_current} s")
+
+            # ----------------------------------------------------------------------------------------------------------------------
+            # Movimientos
+            # Movimiento horizontal
+            if not self.enemy_move_horizontal_lock:
+                # Izquierda
+                if self.enemy_move_walk_left and self.enemy_move_walk_left_lock == False:
+                    if self.enemy_run_status and self.enemy_run_toggle:
+                        # PowerUp Velocidad
+                        self.enemy.moveBy(-self.enemy_speed * 2, 0)
+                        self.enemy.set_direction("run_left")
+                    else:
+                        self.enemy.moveBy(-self.enemy_speed, 0)
+                        self.enemy.set_direction("left")
+                # Derecha
+                if self.enemy_move_walk_right and self.enemy_move_walk_right_lock == False:
+                    if self.enemy_run_status and self.enemy_run_toggle:
+                        # PowerUp Velocidad
+                        self.enemy.moveBy(self.enemy_speed * 2, 0)
+                        self.enemy.set_direction("run_right")
+                    else:
+                        self.enemy.moveBy(self.enemy_speed, 0)
+                        self.enemy.set_direction("right")
+
+            # Escalado
+            if not self.enemy_move_climb_lock:
+                # Ascendente
+                if not self.enemy_move_climb_up_lock:
+                    if self.enemy_move_climb_up:
+                        self.enemy.moveBy(0, -self.enemy_speed)
+                        self.enemy.set_direction("climb_up")
+                # Descendente
+                if not self.enemy_move_climb_down_lock:
+                    if self.enemy_move_climb_down:
+                        self.enemy.moveBy(0, self.enemy_speed)
+                        self.enemy.set_direction("climb_down")
+            if self.enemy_scaling_state:
+                self.enemy_gravity_toggle = False
+
+            # Salto
+            if not self.enemy_move_jump_lock and not self.enemy_scaling_state:
+                tipo = None
+                if self.enemy_move_jump_left:
+                    tipo = "left"
+                elif self.enemy_move_jump_right:
+                    tipo = "right"
+                elif self.enemy_move_jump_up:
+                    tipo = "up"
+
+                if tipo:
+                    self.enemy_move_jump_last = tipo
+                    self.enemy_move_jump_up = False
+                    self.enemy_move_jump_left = False
+                    self.enemy_move_jump_right = False
+                    self.enemy_jumping_state = True
+                    self.enemy_move_jump_lock = True
+                    self.enemy_gravity_jump_speed = self.enemy_gravity_jump_speed_initial
+                    self.enemy_gravity_toggle = False
+
+            if self.enemy_jumping_state:
+                if self.enemy_move_jump_last == "up":
+                    self.enemy.set_direction("jump_up")
+                    self.enemy.moveBy(0, -self.enemy_gravity_jump_speed)
+                elif self.enemy_move_jump_last == "left":
+                    self.enemy.set_direction("jump_left")
+                    self.enemy.moveBy(-self.enemy_gravity_jump_speed * 1.1,
+                                      -self.enemy_gravity_jump_speed * 0.75)
+                elif self.enemy_move_jump_last == "right":
+                    self.enemy.set_direction("jump_right")
+                    self.enemy.moveBy(self.enemy_gravity_jump_speed * 1.1,
+                                      -self.enemy_gravity_jump_speed * 0.75)
+
+                # Ajuste para que dure más
+                self.enemy_gravity_jump_speed -= 0.25  # antes era 1
+
+                self.enemy._anim_speed = int(self.enemy_gravity_jump_speed * 0.01)
+
+                if self.enemy_gravity_jump_speed <= 0:
+                    self.enemy_jumping_state = False
+                    self.enemy_gravity_toggle = True
+                    self.enemy._anim_speed = 4
+
+            # ----------------------------------------------------------------------------------------------------------------------
+            # Gravedad
+            if self.enemy_gravity_toggle:
+                if self.enemy_jumping_state:
+                    self.i_enemy_damage_fall_accumulated -= self.enemy_gravity_jump_speed * 0.75
+                if not self.enemy_jumping_state:
+                    print("NO ESTA SALTANDO")
+                    self.enemy.moveBy(0, self.enemy_gravity_speed)
+                    self.i_enemy_damage_fall_accumulated += self.enemy_gravity_speed
+                    if self.i_enemy_damage_fall_accumulated >= self.platform_separation:
+                        self.i_enemy_damage_fall_accumulated = 0
+                        self.enemy_damage_fall_accumulated += 1
+
+            else:
+                if self.enemy_damage_fall_accumulated >= 0:
+                    self.damage_management(enemy_damage_fall_accumulated_arg=self.enemy_damage_fall_accumulated)
+                self.i_enemy_damage_fall_accumulated = 0
+
+            if self.enemy_life_current <= 0:
+                print("JUGADOR MUERTO (FALTA MÉTODO PARA EL ESTADO DE MUERTE DEL JUGADOR)")
+
+# ======================================================================================================================
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Debug
+        self.label.setText(f"I - {self.player_points}")
+        self.label_2.setText(f"Top - {self.players_top}")
+        self.label_3.setText(f"II - {self.enemy_points}")
+
         if self.show_collisions_toggle:
             self.show_collisions_dynamic()
-# ======================================================================================================================
+
 
 # ======================================================================================================================
 # Controles
@@ -889,18 +1229,26 @@ class Level1(QWidget):
         if key == Qt.Key_Left:
             if self.rol == "player":
                 self.player_move_walk_left = True
+            if self.rol == "player":
+                self.enemy_move_walk_left = True
 
         if key == Qt.Key_Right:
             if self.rol == "player":
                 self.player_move_walk_right = True
+            if self.rol == "enemy":
+                self.enemy_move_walk_right = True
 
         if key == Qt.Key_Up:
             if self.rol == "player":
                 self.player_move_climb_up = True
+            if self.rol == "enemy":
+                self.enemy_move_climb_up = True
 
         if key == Qt.Key_Down:
             if self.rol == "player":
                 self.player_move_climb_down = True
+            if self.rol == "enemy":
+                self.enemy_move_climb_down = True
 
         if Qt.Key_Space in self.multiple_keys:
             if self.rol == "player":
@@ -914,6 +1262,17 @@ class Level1(QWidget):
                     self.player_move_jump_right = True
                 else:
                     self.player_move_jump_up = True
+            if self.rol == "enemy":
+                self.enemy_move_jump_up = False
+                self.enemy_move_jump_left = False
+                self.enemy_move_jump_right = False
+
+                if Qt.Key_Left in self.multiple_keys:
+                    self.enemy_move_jump_left = True
+                elif Qt.Key_Right in self.multiple_keys:
+                    self.enemy_move_jump_right = True
+                else:
+                    self.enemy_move_jump_up = True
 
         if key == Qt.Key_E:
             if self.rol == "player":
@@ -943,24 +1302,36 @@ class Level1(QWidget):
         if key == Qt.Key_Left:
             if self.rol == "player":
                 self.player_move_walk_left = False
+            if self.rol == "enemy":
+                self.enemy_move_walk_left = False
 
         elif key == Qt.Key_Right:
             if self.rol == "player":
                 self.player_move_walk_right = False
+            if self.rol == "enemy":
+                self.enemy_move_walk_right = False
 
         elif key == Qt.Key_Space:
             if self.rol == "player":
                 self.player_move_jump_up = False
                 self.player_move_jump_left = False
                 self.player_move_jump_right = False
+            if self.rol == "enemy":
+                self.enemy_move_jump_up = False
+                self.enemy_move_jump_left = False
+                self.enemy_move_jump_right = False
 
         elif key == Qt.Key_Up:
             if self.rol == "player":
                 self.player_move_climb_up = False
+            if self.rol == "enemy":
+                self.enemy_move_climb_up = False
 
         elif key == Qt.Key_Down:
             if self.rol == "player":
                 self.player_move_climb_down = False
+            if self.rol == "enemy":
+                self.enemy_move_climb_down = False
 
         elif key == Qt.Key_R:
             if self.rol == "player":
