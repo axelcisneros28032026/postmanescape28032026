@@ -74,7 +74,7 @@ class Level1(QWidget):
         self.player_run_status = False # Estado de aceleración
         self.player_run_toggle = False # Interruptor de aceleración
         self.player_run_lock = False # Bloqueo de aceleración
-        self.player_run_timer = QTimer(timeout = self.power_up_run) # Contador de aceleración
+        self.player_run_timer = QTimer(timeout = self.player_power_up_run) # Contador de aceleración
 
         # Regeneración
         self.player_regeneration_initial = 3 # Tiempo de regeneración inicial (segundos)
@@ -83,7 +83,7 @@ class Level1(QWidget):
         self.player_regeneration_counter = 0  # Contador de la regeneración
         self.player_regeneration_status = False # Estado de regeneración
         self.player_regeneration_lock = False # Bloqueo de regeneración
-        self.player_regeneration_timer = QTimer(timeout = self.power_up_regeneration)  # Contador de regeneración
+        self.player_regeneration_timer = QTimer(timeout = self.player_power_up_regeneration)  # Contador de regeneración
 
         # Inmunidad
         self.player_immunity_initial = 3  # Tiempo de inmunidad inicial (segundos)
@@ -92,7 +92,7 @@ class Level1(QWidget):
         self.player_immunity_counter = 0 # Contador de la inmunidad
         self.player_immunity_status = False  # Estado de inmunidad
         self.player_immunity_lock = False  # Bloqueo de inmunidad
-        self.player_immunity_timer = QTimer(timeout=self.power_up_immunity)  # Contador de inmunidad
+        self.player_immunity_timer = QTimer(timeout=self.player_power_up_immunity)  # Contador de inmunidad
         # --------------------------------------------------------------------------------------------------------------
 
         # --------------------------------------------------------------------------------------------------------------
@@ -138,7 +138,9 @@ class Level1(QWidget):
 
         # Colisiones
         self.player_coll_escalera = False # Estado de colisión con escalera
-        self.player_coll_platform = False # Estado de colisión con platform
+        self.player_coll_platform = False # Estado de colisión con platforma
+        self.player_coll_platform_sup = False  # Estado de colisión con platforma superior
+        self.player_coll_platform_inf = False  # Estado de colisión con platforma inferior
         # --------------------------------------------------------------------------------------------------------------
         # ==============================================================================================================
 
@@ -159,13 +161,13 @@ class Level1(QWidget):
         # Potenciadores:
         # Aceleración
         self.enemy_run_initial = 5  # Tiempo de aceleración inicial
-        self.enemy_run_current = self.enemy_run_initial  # Tiempo de aceleración actual (segundos)
+        self.enemy_stalk_current = self.enemy_run_initial  # Tiempo de aceleración actual (segundos)
         self.enemy_run_cooldown = 8  # Tiempo de espera para reactivar la aceleración (segundos)
         self.enemy_run_counter = 0  # Contador de la aceleración
         self.enemy_run_status = False  # Estado de aceleración
         self.enemy_run_toggle = False  # Interruptor de aceleración
         self.enemy_run_lock = False  # Bloqueo de aceleración
-        self.enemy_run_timer = QTimer(timeout=self.power_up_run)  # Contador de aceleración
+        #self.enemy_run_timer = QTimer(timeout=self.player_power_up_run)  # Contador de aceleración
 
         # Regeneración
         self.enemy_regeneration_initial = 3  # Tiempo de regeneración inicial (segundos)
@@ -174,16 +176,16 @@ class Level1(QWidget):
         self.enemy_regeneration_counter = 0  # Contador de la regeneración
         self.enemy_regeneration_status = False  # Estado de regeneración
         self.enemy_regeneration_lock = False  # Bloqueo de regeneración
-        self.enemy_regeneration_timer = QTimer(timeout=self.power_up_regeneration)  # Contador de regeneración
+        #self.enemy_regeneration_timer = QTimer(timeout=self.player_power_up_regeneration)  # Contador de regeneración
 
         # Inmunidad
-        self.enemy_immunity_initial = 3  # Tiempo de inmunidad inicial (segundos)
-        self.enemy_immunity_current = self.enemy_immunity_initial  # Tiempo de inmunidad actual
-        self.enemy_immunity_cooldown = 5  # Tiempo de espera para reactivar la inmunidad (segundos)
-        self.enemy_immunity_counter = 0  # Contador de la inmunidad
-        self.enemy_immunity_status = False  # Estado de inmunidad
-        self.enemy_immunity_lock = False  # Bloqueo de inmunidad
-        self.enemy_immunity_timer = QTimer(timeout=self.power_up_immunity)  # Contador de inmunidad
+        self.enemy_escape_initial = 3  # Tiempo de inmunidad inicial (segundos)
+        self.enemy_escape_current = self.enemy_escape_initial  # Tiempo de inmunidad actual
+        self.enemy_escape_cooldown = 5  # Tiempo de espera para reactivar la inmunidad (segundos)
+        self.enemy_escape_counter = 0  # Contador de la inmunidad
+        self.enemy_escape_status = False  # Estado de inmunidad
+        self.enemy_escape_lock = False  # Bloqueo de inmunidad
+        self.enemy_escape_timer = QTimer(timeout=self.enemy_power_up_escape)  # Contador de inmunidad
         # --------------------------------------------------------------------------------------------------------------
 
         # --------------------------------------------------------------------------------------------------------------
@@ -244,11 +246,8 @@ class Level1(QWidget):
         # Administrador de daño
         self.player_damage_timer = QTimer()
         self.player_damage_timer.setSingleShot(True)
-        self.player_damage_timer.timeout.connect(self.damage_management_aux)
+        self.player_damage_timer.timeout.connect(self.player_damage_management_aux)
 
-        self.enemy_damage_timer = QTimer()
-        self.enemy_damage_timer.setSingleShot(True)
-        self.enemy_damage_timer.timeout.connect(self.damage_management_aux)
         # --------------------------------------------------------------------------------------------------------------
 
         # Puntuaciones altas
@@ -264,14 +263,14 @@ class Level1(QWidget):
             self.label_2.setAlignment(Qt.AlignCenter)
             self.label_3 = QLabel(f"II - {self.enemy_points}")
             self.label_3.setAlignment(Qt.AlignCenter)
-            self.label_life = QLabel(f"❤️ {self.player_life_current}")
-            self.label_life.setAlignment(Qt.AlignLeft)
-            self.label_regeneration = QLabel(f"️⚕️ {self.player_regeneration_current} s")
-            self.label_regeneration.setAlignment(Qt.AlignLeft)
-            self.label_immunity = QLabel(f"️🛡️ {self.player_immunity_current} s")
-            self.label_immunity.setAlignment(Qt.AlignLeft)
-            self.label_run = QLabel(f"️🏃 {self.player_run_current} s")
-            self.label_run.setAlignment(Qt.AlignLeft)
+            self.label_4 = QLabel(f"❤️ {self.player_life_current}")
+            self.label_4.setAlignment(Qt.AlignLeft)
+            self.label_5 = QLabel(f"️⚕️ {self.player_regeneration_current} s")
+            self.label_5.setAlignment(Qt.AlignLeft)
+            self.label_6 = QLabel(f"️🛡️ {self.player_immunity_current} s")
+            self.label_6.setAlignment(Qt.AlignLeft)
+            self.label_7 = QLabel(f"️🏃 {self.player_run_current} s")
+            self.label_7.setAlignment(Qt.AlignLeft)
         if self.rol == "enemy":
             self.label = QLabel(f"I - {self.player_points}")
             self.label.setAlignment(Qt.AlignCenter)
@@ -279,14 +278,14 @@ class Level1(QWidget):
             self.label_2.setAlignment(Qt.AlignCenter)
             self.label_3 = QLabel(f"II - {self.enemy_points}")
             self.label_3.setAlignment(Qt.AlignCenter)
-            self.label_life = QLabel(f"❤️ {self.enemy_life_current}")
-            self.label_life.setAlignment(Qt.AlignLeft)
-            self.label_regeneration = QLabel(f"️⚕️ {self.enemy_regeneration_current} s")
-            self.label_regeneration.setAlignment(Qt.AlignLeft)
-            self.label_immunity = QLabel(f"️🛡️ {self.enemy_immunity_current} s")
-            self.label_immunity.setAlignment(Qt.AlignLeft)
-            self.label_run = QLabel(f"️🏃 {self.enemy_run_current} s")
-            self.label_run.setAlignment(Qt.AlignLeft)
+            self.label_4 = QLabel(f"🦴 {self.enemy_life_current}")
+            self.label_4.setAlignment(Qt.AlignLeft)
+            self.label_5 = QLabel(f"️⚕️ {self.enemy_regeneration_current} s")
+            self.label_5.setAlignment(Qt.AlignLeft)
+            self.label_6 = QLabel(f"️🛡️ {self.enemy_escape_current} s")
+            self.label_6.setAlignment(Qt.AlignLeft)
+            self.label_7 = QLabel(f"️⛓️ {self.enemy_stalk_current} s")
+            self.label_7.setAlignment(Qt.AlignLeft)
 
         # Construcción de escena
         self.scene_width = 1280
@@ -297,7 +296,7 @@ class Level1(QWidget):
 
         self.block1_n = 6  # Número de platforms (Par)
 
-        self.enemy = Enemy(speed = 5, anim_speed = int(1000 / self.frequency * 0.075))
+        self.enemy = Enemy(speed = self.enemy_speed, anim_speed = int(1000 / self.frequency * 0.115))
         self.victim = Victim(speed = 5, anim_speed = int(1000 / self.frequency * 0.075))
         self.player = Player(speed = self.player_speed, anim_speed = int(1000 / self.frequency * 0.115))
 
@@ -374,10 +373,10 @@ class Level1(QWidget):
         self.layout.setRowStretch(10, 1)
 
         # Contenedor 2 (Botones de retorno, estadísticas y datos)
-        self.layout_2A1.addWidget(self.label_life)
-        self.layout_2A1.addWidget(self.label_regeneration)
-        self.layout_2A2.addWidget(self.label_immunity)
-        self.layout_2A2.addWidget(self.label_run)
+        self.layout_2A1.addWidget(self.label_4)
+        self.layout_2A1.addWidget(self.label_5)
+        self.layout_2A2.addWidget(self.label_6)
+        self.layout_2A2.addWidget(self.label_7)
         self.layout_2A.addLayout(self.layout_2A1, 0, 0, 1, 1)
         self.layout_2A.addLayout(self.layout_2A2, 0, 1, 1, 1)
         self.layout_2.addWidget(self.pushButton_back)
@@ -567,22 +566,25 @@ class Level1(QWidget):
         self.label_2.setText(f"Top - {self.players_top}")
         self.label_3.setText(f"II - {self.enemy_points}")
 
+# ======================================================================================================================
+# Jugador
+
     def method_player_move_jump(self, type):
         self.player_move_jump_type = type
         if self.player_move_jump_type == "up":
             self.player.set_direction("jump_up")
             self.player_move_jump_lock = False
 
-    def power_up_immunity(self):
+    def player_power_up_immunity(self):
         # Activar Power-Up
         if not self.player_immunity_lock:
             self.player_immunity_lock = True
             self.player_immunity_status = True
-            self.label_life.setStyleSheet("""QLabel { color: orange; }""")
+            self.label_4.setStyleSheet("""QLabel { color: orange; }""")
             self.player_immunity_counter = self.player_immunity_initial
             self.player_immunity_current = self.player_immunity_counter
             self.player_immunity_timer.start(1000)
-            self.label_immunity.setStyleSheet("""QLabel { color: cyan; }""")
+            self.label_6.setStyleSheet("""QLabel { color: cyan; }""")
             print(self.player_immunity_counter)
             return
         self.player_immunity_counter -= 1
@@ -594,8 +596,8 @@ class Level1(QWidget):
                 # Iniciar cooldown
                 self.player_immunity_counter = self.player_immunity_cooldown
                 self.player_immunity_current = self.player_immunity_counter
-                self.label_immunity.setStyleSheet("""QLabel { color: gray; }""")
-                self.label_life.setStyleSheet("QLabel { color: yellow; }")
+                self.label_6.setStyleSheet("""QLabel { color: gray; }""")
+                self.label_4.setStyleSheet("QLabel { color: yellow; }")
                 return
             self.player_immunity_current = self.player_immunity_counter
             return
@@ -608,29 +610,29 @@ class Level1(QWidget):
                 self.player_immunity_current = self.player_immunity_counter
                 self.player_immunity_timer.stop()
                 print(self.player_immunity_counter)
-                self.label_immunity.setStyleSheet("""QLabel { color: yellow; }""")
+                self.label_6.setStyleSheet("""QLabel { color: yellow; }""")
                 return
             self.player_immunity_current = self.player_immunity_counter
             print(self.player_immunity_counter)
 
-    def power_up_regeneration(self):
+    def player_power_up_regeneration(self):
         # Activar Power-Up
         if not self.player_regeneration_lock:
             self.player_regeneration_lock = True
             self.player_regeneration_status = True
-            self.label_life.setStyleSheet("""QLabel { color: green; }""")
+            self.label_4.setStyleSheet("""QLabel { color: green; }""")
             if self.player_life_current < self.player_life_initial:
                 self.player_life_current += 1
             self.player_regeneration_counter = self.player_regeneration_initial
             self.player_regeneration_current = self.player_regeneration_counter
             self.player_regeneration_timer.start(1000)
-            self.label_regeneration.setStyleSheet("""QLabel { color: cyan; }""")
+            self.label_5.setStyleSheet("""QLabel { color: cyan; }""")
             print(self.player_regeneration_counter)
             return
         self.player_regeneration_counter -= 1
 
         if self.player_regeneration_status:
-            self.label_life.setStyleSheet("""QLabel { color: green; }""")
+            self.label_4.setStyleSheet("""QLabel { color: green; }""")
             if self.player_regeneration_counter >= 1:
                 if self.player_life_current < self.player_life_initial:
                     self.player_life_current += 1
@@ -640,8 +642,8 @@ class Level1(QWidget):
                 # Iniciar cooldown
                 self.player_regeneration_counter = self.player_regeneration_cooldown
                 self.player_regeneration_current = self.player_regeneration_counter
-                self.label_regeneration.setStyleSheet("""QLabel { color: gray; }""")
-                self.label_life.setStyleSheet("""QLabel { color: yellow; }""")
+                self.label_5.setStyleSheet("""QLabel { color: gray; }""")
+                self.label_4.setStyleSheet("""QLabel { color: yellow; }""")
                 return
             self.player_regeneration_current = self.player_regeneration_counter
             return
@@ -654,12 +656,12 @@ class Level1(QWidget):
                 self.player_regeneration_current = self.player_regeneration_counter
                 self.player_regeneration_timer.stop()
                 print(self.player_regeneration_counter)
-                self.label_regeneration.setStyleSheet("""QLabel { color: yellow; }""")
+                self.label_5.setStyleSheet("""QLabel { color: yellow; }""")
                 return
             self.player_regeneration_current = self.player_regeneration_counter
             print(self.player_regeneration_counter)
 
-    def power_up_run(self):
+    def player_power_up_run(self):
         # Activar Power-Up
         if not self.player_run_lock:
             self.player_run_lock = True
@@ -668,7 +670,7 @@ class Level1(QWidget):
             self.player_run_counter = self.player_run_initial
             self.player_run_current = self.player_run_counter
             self.player_run_timer.start(1000)
-            self.label_run.setStyleSheet("""QLabel { color: cyan; }""")
+            self.label_7.setStyleSheet("""QLabel { color: cyan; }""")
             print(self.player_run_counter)
             return
         self.player_run_counter -= 1
@@ -685,7 +687,7 @@ class Level1(QWidget):
                 self.player_run_counter = self.player_run_cooldown
                 self.player_run_current = self.player_run_counter
                 print(self.player_run_counter)
-                self.label_run.setStyleSheet("""QLabel { color: gray; }""")
+                self.label_7.setStyleSheet("""QLabel { color: gray; }""")
                 return
             self.player_run_current = self.player_run_counter
             print(self.player_run_counter)
@@ -698,12 +700,12 @@ class Level1(QWidget):
                 self.player_run_counter = self.player_run_initial
                 self.player_run_current = self.player_run_counter
                 self.player_run_timer.stop()
-                self.label_run.setStyleSheet("""QLabel { color: yellow; }""")
+                self.label_7.setStyleSheet("""QLabel { color: yellow; }""")
                 return
             self.player_run_current = self.player_run_counter
             print(self.player_run_counter)
 
-    def damage_management(self, player_damage_fall_accumulated_arg=0):
+    def player_damage_management(self, player_damage_fall_accumulated_arg=0):
 
         total_damage = player_damage_fall_accumulated_arg
 
@@ -717,13 +719,64 @@ class Level1(QWidget):
 
         if not self.player_immunity_status:
             self.player_damage_receiving_status = True
-            self.label_life.setStyleSheet("""QLabel { color: red; }""")
+            self.label_4.setStyleSheet("""QLabel { color: red; }""")
 
         self.player_damage_timer.start(1000)
 
-    def damage_management_aux(self):
+    def player_damage_management_aux(self):
         self.player_damage_receiving_status = False
-        self.label_life.setStyleSheet("""QLabel { color: yellow; }""")
+        self.label_4.setStyleSheet("""QLabel { color: yellow; }""")
+
+# ======================================================================================================================
+
+# ======================================================================================================================
+# Enemigo
+
+    def method_enemy_move_jump(self, type):
+        self.enemy_move_jump_type = type
+        if self.enemy_move_jump_type == "up":
+            self.enemy.set_direction("jump_up")
+            self.enemy_move_jump_lock = False
+
+    def enemy_power_up_escape(self):
+        # Activar Power-Up
+        if not self.enemy_escape_lock:
+            self.enemy_escape_lock = True
+            self.enemy_escape_status = True
+            self.enemy_escape_counter = self.enemy_escape_initial
+            self.enemy_escape_current = self.enemy_escape_counter
+            self.enemy_escape_timer.start(1000)
+            self.label_6.setStyleSheet("""QLabel { color: cyan; }""")
+            print(self.enemy_escape_counter)
+            return
+        self.enemy_escape_counter -= 1
+
+        if self.enemy_escape_status:
+            # Finalizar Power-Up
+            if self.enemy_escape_counter <= 0:
+                self.enemy_escape_status = False
+                # Iniciar cooldown
+                self.enemy_escape_counter = self.enemy_escape_cooldown
+                self.enemy_escape_current = self.enemy_escape_counter
+                self.label_6.setStyleSheet("""QLabel { color: gray; }""")
+                return
+            self.enemy_escape_current = self.enemy_escape_counter
+            return
+
+        # Fin de cooldown
+        if not self.enemy_escape_status:
+            if self.enemy_escape_counter <= 0:
+                self.enemy_escape_lock = False
+                self.enemy_escape_counter = self.enemy_escape_initial
+                self.enemy_escape_current = self.enemy_escape_counter
+                self.enemy_escape_timer.stop()
+                print(self.enemy_escape_counter)
+                self.label_6.setStyleSheet("""QLabel { color: yellow; }""")
+                return
+            self.enemy_escape_current = self.enemy_escape_counter
+            print(self.enemy_escape_counter)
+
+# ======================================================================================================================
 
     def scheduler(self, ms, func, *funcs):
         timer = QTimer(self)
@@ -738,12 +791,14 @@ class Level1(QWidget):
 # ======================================================================================================================
 # Hilo principal
     def game_loop(self):
+        # Jugador
         self.player_gravity_speed = self.player_gravity_speed_initial
 
         self.player_speed = self.player.speed
 
         self.player_coll_escalera = None
         self.player_coll_platform = None
+        self.player_coll_platform_inf = None
         self.player_move_horizontal_lock = False
         self.player_move_walk_left_lock = False
         self.player_move_walk_right_lock = False
@@ -755,6 +810,25 @@ class Level1(QWidget):
 
         if not self.player_scaling_state and not self.player_jumping_state:
             self.player_gravity_toggle = True
+
+        # Enemigo
+        self.enemy_gravity_speed = self.enemy_gravity_speed_initial
+
+        self.enemy_speed = self.enemy.speed
+
+        self.enemy_coll_escalera = None
+        self.enemy_coll_platform = None
+        #self.enemy_move_horizontal_lock = False
+        self.enemy_move_walk_left_lock = False
+        self.enemy_move_walk_right_lock = False
+
+        if not self.enemy_scaling_state:
+            self.enemy_move_climb_lock = True
+            self.enemy_move_climb_up_lock = True
+            self.enemy_move_climb_down_lock = True
+
+        if not self.enemy_scaling_state and not self.enemy_jumping_state:
+            self.enemy_gravity_toggle = True
 
         # Rectángulo del jugador en coordenadas de escena
         player_rect = self.player.mapToScene(self.player.boundingRect()).boundingRect()
@@ -799,6 +873,11 @@ class Level1(QWidget):
                     self.platform_x2 = platform_rect.right()
                     self.platform_y = platform_rect.top()
                     self.platform_y2 = platform_rect.bottom()
+
+                    if self.player_y > self.platform_y and self.player_y2 > self.platform_y2:
+                        self.player_coll_platform_sup = True
+                    elif self.player_y < self.platform_y and self.player_y2 < self.platform_y2:
+                        self.player_coll_platform_inf = True
 
                 if isinstance(item, Coins):
                     self.scene.removeItem(item)
@@ -880,10 +959,10 @@ class Level1(QWidget):
 # PowerUps
     # Regeneración
     # Inmunidad
-            self.label_life.setText(f"❤️ {self.player_life_current}")
-            self.label_regeneration.setText(f"️⚕️ {self.player_regeneration_current} s")
-            self.label_immunity.setText(f"️🛡️ {self.player_immunity_current} s")
-            self.label_run.setText(f"️🏃 {self.player_run_current} s")
+            self.label_4.setText(f"❤️ {self.player_life_current}")
+            self.label_5.setText(f"️⚕️ {self.player_regeneration_current} s")
+            self.label_6.setText(f"️🛡️ {self.player_immunity_current} s")
+            self.label_7.setText(f"️🏃 {self.player_run_current} s")
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Movimientos
@@ -979,9 +1058,8 @@ class Level1(QWidget):
 
             else:
                 if self.player_damage_fall_accumulated >= 0:
-                    self.damage_management(player_damage_fall_accumulated_arg = self.player_damage_fall_accumulated)
+                    self.player_damage_management(player_damage_fall_accumulated_arg = self.player_damage_fall_accumulated)
                 self.i_player_damage_fall_accumulated = 0
-
 
             if self.player_life_current <= 0:
                 print("JUGADOR MUERTO (FALTA MÉTODO PARA EL ESTADO DE MUERTE DEL JUGADOR)")
@@ -1019,6 +1097,14 @@ class Level1(QWidget):
 
                 if isinstance(item, Victim):
                     print("¡Jugador ha ganado!")
+
+                if isinstance(item, Player):
+                    if self.enemy_move_walk_left:
+                        if self.enemy_x >= self.player_x:
+                            self.player.moveBy(-self.enemy_speed, 0)
+                    elif self.enemy_move_walk_right:
+                        if self.enemy_x2 <= self.player_x2:
+                            self.player.moveBy(self.enemy_speed, 0)
 
             for platform in self.scene.items():
                 if isinstance(platform, Platforms):
@@ -1092,10 +1178,10 @@ class Level1(QWidget):
             # PowerUps
             # Regeneración
             # Inmunidad
-            self.label_life.setText(f"❤️ {self.enemy_life_current}")
-            self.label_regeneration.setText(f"️⚕️ {self.enemy_regeneration_current} s")
-            self.label_immunity.setText(f"️🛡️ {self.enemy_immunity_current} s")
-            self.label_run.setText(f"️🏃 {self.enemy_run_current} s")
+            self.label_4.setText(f"🦴 {self.enemy_life_current}")
+            self.label_5.setText(f"️⚕️ {self.enemy_regeneration_current} s")
+            self.label_6.setText(f"️🛡️ {self.enemy_escape_current} s")
+            self.label_7.setText(f"️🏃 {self.enemy_stalk_current} s")
 
             # ----------------------------------------------------------------------------------------------------------------------
             # Movimientos
@@ -1159,11 +1245,11 @@ class Level1(QWidget):
                 if self.enemy_move_jump_last == "up":
                     self.enemy.set_direction("jump_up")
                     self.enemy.moveBy(0, -self.enemy_gravity_jump_speed)
-                elif self.enemy_move_jump_last == "left":
+                elif self.enemy_move_jump_last == "left" and not self.enemy_move_horizontal_lock:
                     self.enemy.set_direction("jump_left")
                     self.enemy.moveBy(-self.enemy_gravity_jump_speed * 1.1,
                                       -self.enemy_gravity_jump_speed * 0.75)
-                elif self.enemy_move_jump_last == "right":
+                elif self.enemy_move_jump_last == "right" and not self.enemy_move_horizontal_lock:
                     self.enemy.set_direction("jump_right")
                     self.enemy.moveBy(self.enemy_gravity_jump_speed * 1.1,
                                       -self.enemy_gravity_jump_speed * 0.75)
@@ -1181,20 +1267,9 @@ class Level1(QWidget):
             # ----------------------------------------------------------------------------------------------------------------------
             # Gravedad
             if self.enemy_gravity_toggle:
-                if self.enemy_jumping_state:
-                    self.i_enemy_damage_fall_accumulated -= self.enemy_gravity_jump_speed * 0.75
                 if not self.enemy_jumping_state:
                     print("NO ESTA SALTANDO")
                     self.enemy.moveBy(0, self.enemy_gravity_speed)
-                    self.i_enemy_damage_fall_accumulated += self.enemy_gravity_speed
-                    if self.i_enemy_damage_fall_accumulated >= self.platform_separation:
-                        self.i_enemy_damage_fall_accumulated = 0
-                        self.enemy_damage_fall_accumulated += 1
-
-            else:
-                if self.enemy_damage_fall_accumulated >= 0:
-                    self.damage_management(enemy_damage_fall_accumulated_arg=self.enemy_damage_fall_accumulated)
-                self.i_enemy_damage_fall_accumulated = 0
 
             if self.enemy_life_current <= 0:
                 print("JUGADOR MUERTO (FALTA MÉTODO PARA EL ESTADO DE MUERTE DEL JUGADOR)")
@@ -1209,7 +1284,6 @@ class Level1(QWidget):
 
         if self.show_collisions_toggle:
             self.show_collisions_dynamic()
-
 
 # ======================================================================================================================
 # Controles
@@ -1229,7 +1303,7 @@ class Level1(QWidget):
         if key == Qt.Key_Left:
             if self.rol == "player":
                 self.player_move_walk_left = True
-            if self.rol == "player":
+            if self.rol == "enemy":
                 self.enemy_move_walk_left = True
 
         if key == Qt.Key_Right:
@@ -1277,12 +1351,15 @@ class Level1(QWidget):
         if key == Qt.Key_E:
             if self.rol == "player":
                 if not self.player_immunity_lock:
-                    self.power_up_immunity()
+                    self.player_power_up_immunity()
+            if self.rol == "enemy":
+                if not self.enemy_escape_lock:
+                    self.enemy_power_up_escape()
 
         if key == Qt.Key_R:
             if self.rol == "player":
                 if not self.player_regeneration_lock:
-                    self.power_up_regeneration()
+                    self.player_power_up_regeneration()
 
         if key == Qt.Key_Control:
             if self.rol == "player":
@@ -1290,7 +1367,7 @@ class Level1(QWidget):
                     self.player_run_toggle = not self.player_run_toggle
 
                 if not self.player_run_lock:
-                    self.power_up_run()
+                    self.player_power_up_run()
 
         if Qt.Key_B in self.multiple_keys and Qt.Key_F3 in self.multiple_keys:
             self.method_show_collisions_toggle()
