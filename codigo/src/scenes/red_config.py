@@ -7,27 +7,29 @@ from config import fuente_nombre
 
 class Ventanared(QWidget):
 
-    signalAjustesRed = Signal(str, str)
+    signalAjustesRed = Signal(str, str)   # ip, puerto  → Cliente
+    signalHostear    = Signal(str)        # puerto      → Servidor  ← NUEVO
     signalVolver = Signal()
     signalVolverInicio = Signal()
 
     def __init__(self):
         super().__init__()
-        # Posicionamos el titulo a la ventana
+        # Posicionamos el título a la ventana
         self.setWindowTitle("Conexión de red")
 
         layout = QGridLayout()
 
-        self.label_ip=QLabel("Dirección IP:")
-        self.input_ip=QLineEdit()
+        self.label_ip = QLabel("Dirección IP:")
+        self.input_ip = QLineEdit()
         self.input_ip.setPlaceholderText("ej. 192.168.1.2")
         self.input_ip.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        self.label_puerto=QLabel("Puerto:")
-        self.input_puerto=QLineEdit()
+        self.label_puerto = QLabel("Puerto:")
+        self.input_puerto = QLineEdit()
         self.input_puerto.setPlaceholderText("ej. 25565")
 
-        self.boton=QPushButton("Conectar")
+        self.boton = QPushButton("Conectar")
+        self.pushButton_Host = QPushButton("Hostear")
         self.pushButton_Volver = QPushButton("←")
         self.pushButton_Volver.setFixedSize(64, 64)
         self.pushButton_VolverInicio = QPushButton("🏠")
@@ -37,14 +39,15 @@ class Ventanared(QWidget):
         layout.setSpacing(16)
         layout.setColumnStretch(0, 1)
         layout.setRowStretch(0, 1)
-        layout.addWidget(self.pushButton_Volver, 1, 1, 1, 1)
+        layout.addWidget(self.pushButton_Volver,       1, 1, 1, 1)
         layout.addWidget(self.pushButton_VolverInicio, 1, 2, 1, 1)
         layout.addWidget(QLabel("Configuración de red"), 1, 3, 1, 1)
-        layout.addWidget(self.label_ip, 2, 3, 1, 1)
-        layout.addWidget(self.input_ip, 3, 3, 1, 1)
-        layout.addWidget(self.label_puerto, 4, 3, 1, 1)
-        layout.addWidget(self.input_puerto, 5, 3, 1, 1)
-        layout.addWidget(self.boton, 6, 3, 1, 1)
+        layout.addWidget(self.label_ip,                2, 3, 1, 1)
+        layout.addWidget(self.input_ip,                3, 3, 1, 1)
+        layout.addWidget(self.label_puerto,            4, 3, 1, 1)
+        layout.addWidget(self.input_puerto,            5, 3, 1, 1)
+        layout.addWidget(self.pushButton_Host,         6, 3, 1, 1)
+        layout.addWidget(self.boton,                   7, 3, 1, 1)
         layout.setColumnStretch(10, 1)
         layout.setRowStretch(10, 1)
 
@@ -85,17 +88,25 @@ class Ventanared(QWidget):
 
         # Eventos y Métodos
         self.boton.clicked.connect(self.signalAjustesRed_emitir)
+        self.pushButton_Host.clicked.connect(self.signalHostear_emitir)   # ← NUEVO
         self.pushButton_Volver.clicked.connect(lambda: self.signalVolver.emit())
         self.pushButton_VolverInicio.clicked.connect(lambda: self.signalVolverInicio.emit())
 
     def signalAjustesRed_emitir(self):
-        ip = self.input_ip.text()
-        puerto = self.input_puerto.text()
-        self.signalAjustesRed.emit(ip, puerto)
+        ip = self.input_ip.text().strip()
+        puerto = self.input_puerto.text().strip() or "25565"
+        try:
+            self.signalAjustesRed.emit(ip, str(int(puerto)))  # aseguramos que sea número válido
+        except ValueError:
+            print("[Error] Puerto inválido")
+
+    def signalHostear_emitir(self):   # ← NUEVO
+        puerto = self.input_puerto.text().strip() or "25565"
+        self.signalHostear.emit(puerto)
 
 
 if __name__ == "__main__":
-    app = QApplication()
+    app = QApplication([])
     ventana = Ventanared()
     ventana.show()
     app.exec()

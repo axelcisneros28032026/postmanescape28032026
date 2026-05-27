@@ -1,35 +1,81 @@
-from PySide6.QtCore import QRectF
-from PySide6.QtWidgets import QGraphicsPixmapItem
-from PySide6.QtGui import QPixmap, QPainterPath
 import os
+
+from PySide6.QtCore import QRectF
+from PySide6.QtGui import QPixmap, QPainterPath
+from PySide6.QtWidgets import QGraphicsPixmapItem
 
 from src.config.rutas import DIR_IMAGES
 
 
 class Coins(QGraphicsPixmapItem):
 
-    def __init__(self):
+    def __init__(self, speed=1, anim_speed=16):
         super().__init__()
 
+        self.current_direction = "idle"
+        self.direction = "idle"
+        self.last_direction = "down"
+
+        self.speed = speed
+
+        self._frame_index = 0
+        self._anim_counter = 0
+        self._anim_speed = anim_speed
+
+        self.frames = {
+            "spinning": [
+                os.path.join(DIR_IMAGES, "sprites", "coin", "Sprite-0001.png"),
+                os.path.join(DIR_IMAGES, "sprites", "coin", "Sprite-0002.png"),
+            ],
+            "idle": {
+                "idle": os.path.join(DIR_IMAGES, "sprites", "coin", "Sprite-0001.png"),
+            }
+        }
+
         self.setPixmap(
-            QPixmap(
-                os.path.join(
-                    DIR_IMAGES,
-                    "sprites",
-                    "coin",
-                    "1.png"
-                )
-            )
+            QPixmap(self.frames["idle"]["idle"])
         )
 
+    def set_direction(self, direction):
+
+        if direction != self.current_direction:
+            self._frame_index = 0
+            self._anim_counter = 0
+
+        self.current_direction = direction
+
+        if direction == "idle":
+
+            frame = self.frames["idle"].get(
+                self.last_direction,
+                self.frames["idle"]["idle"]
+            )
+
+        else:
+
+            self.last_direction = direction
+            frames = self.frames[direction]
+
+            self._anim_counter += 1
+
+            if self._anim_counter >= self._anim_speed:
+                self._anim_counter = 0
+                self._frame_index = (
+                    self._frame_index + 1
+                ) % len(frames)
+
+            frame = frames[self._frame_index]
+
+        self.setPixmap(QPixmap(frame))
+
     def boundingRect(self):
+
         rect = self.pixmap().rect()
 
-        # Ajuste de bordes a partir del área original
-        border_left = 16
-        border_right = -16
-        border_top = -16
-        border_bottom = -16
+        border_left = 24
+        border_right = -24
+        border_top = -24
+        border_bottom = -24
 
         return QRectF(
             rect.left() + border_left,
@@ -41,7 +87,6 @@ class Coins(QGraphicsPixmapItem):
     def shape(self):
 
         path = QPainterPath()
-
         path.addRect(self.boundingRect())
 
         return path

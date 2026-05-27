@@ -162,6 +162,15 @@ class Player(QGraphicsPixmapItem):
 
         self.setPixmap(QPixmap(frame))
 
+    def set_frame(self, frame: int):
+        direction = self.current_direction
+        if direction == "idle":
+            return  # idle usa un dict, no lista, no se anima por frame
+        frames = self.frames.get(direction, [])
+        if isinstance(frames, list) and 0 <= frame < len(frames):
+            self._frame_index = frame
+            self.setPixmap(QPixmap(frames[frame]))
+
     def boundingRect(self):
         rect = self.pixmap().rect()
 

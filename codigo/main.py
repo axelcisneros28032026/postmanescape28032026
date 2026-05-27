@@ -18,8 +18,8 @@ from config import fuente, fuente_nombre
 from src.audio.sound import Sound
 from src.components.navigationMenu import NavigationMenu
 from src.config.rutas import *
-from src.scenes.red_config import Ventanared
 from src.scenes.names_input import VentanaRegistro
+from src.scenes.red_config import Ventanared
 
 #   Nombres
 APP_NOMBRE = "Postman Escape"
@@ -31,6 +31,12 @@ APP_NOMBRE_2 = ("Postman\n"
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        self._server = None
+        self._client = None
+        self.ip = "127.0.0.1"
+        self.port = 25565
+
         # Disposición de ventana
         self.setWindowTitle(f"{APP_NOMBRE}")
         self.setWindowIcon(QIcon(APP_ICON))
@@ -178,26 +184,112 @@ class MainWindow(QMainWindow):
         self.widget_B.signalVolver.connect(lambda: sound.click_button())
         self.widget_BB.signalAjustesRed.connect(self.network_settings)
         self.widget_BB.signalAjustesRed.connect(lambda: sound.click_button())
+        self.widget_BB.signalHostear.connect(self.host_game)
+        self.widget_BB.signalHostear.connect(lambda: sound.click_button())
         self.widget_BB.signalVolver.connect(lambda: self.stacked_widget.setCurrentWidget(self.widget_B))
         self.widget_BB.signalVolver.connect(lambda: sound.click_button())
         self.widget_BB.signalVolverInicio.connect(lambda: self.stacked_widget.setCurrentWidget(self.widget_A))
         self.widget_BB.signalVolverInicio.connect(lambda: sound.click_button())
 
+    def host_game(self, port):
+        self.ip = "127.0.0.1"
+        self.port = int(port)
+        self.status_bar.showMessage(f"Esperando jugador en puerto {port}…")
+
+        # Crear el servidor UNA SOLA VEZ aquí
+        from src.network.network import GameServer
+        self._server = GameServer(port=self.port)
+        self._server.start()
+
+        self.start_game(rol="enemy", host=True, ip=self.ip, port=self.port)
 
     def network_settings(self, ip, port):
+        try:
+            port = int(port)
+        except ValueError:
+            self.status_bar.showMessage("Puerto inválido")
+            return
         self.ip = ip
         self.port = port
-        self.status_bar.showMessage(f"Conectando a {ip}:{port}")
-        QTimer.singleShot(1000, lambda: self.status_bar.showMessage(f"Conectado a {ip}:{port}"))
-        QTimer.singleShot(2000, lambda: self.status_bar.showMessage(f"Ping: {self.read_ping()}"))
-        QTimer.singleShot(2500, self.start_game)
+        self.status_bar.showMessage(f"Conectando a {ip}:{port}…")
 
-    def start_game(self):
+        # Crear el cliente UNA SOLA VEZ aquí
+        from src.network.network import GameClient
+        self._client = GameClient(host=ip, port=port)
+        self._client.connect_to_server()
+
+        QTimer.singleShot(500, lambda: self.start_game(
+            rol="player", host=False, ip=ip, port=port
+        ))
+
+    def _on_next_level(self):
+        current_rol = self.widget_C.rol
+        next_rol = "enemy" if current_rol == "player" else "player"
+        was_host = hasattr(self.widget_C, "_server")
+
+        # Reutilizar la conexión existente
+        existing_server = getattr(self.widget_C, "_server", None)
+        existing_client = getattr(self.widget_C, "_client", None)
+
+        self.start_game(
+            rol=next_rol,
+            host=was_host,
+            ip=self.ip,
+            port=self.port,
+            round=self.widget_C.round,
+            prev_points=self.widget_C.player_points,
+            prev_enemy_points=self.widget_C.enemy_points,
+            existing_server=existing_server,
+            existing_client=existing_client,
+        )
+
+    def start_game(self, rol="player", host=False, ip="127.0.0.1", port=25565,
+                   round=1, prev_points=0, prev_enemy_points=0,
+                   existing_server=None, existing_client=None):
         from src.scenes.level1 import Level1
-        self.widget_C = Level1()
-        self.widget_C.setContentsMargins(0, 0, 0, 0)
-        self.widget_C.signal_back.connect(lambda: self.stacked_widget.setCurrentWidget(self.widget_BB))
-        self.widget_C.signal_back_init.connect(lambda: self.stacked_widget.setCurrentWidget(self.widget_A))
+
+        if hasattr(self, "widget_C") and self.widget_C is not None:
+            # Desconectar señales del level anterior antes de destruirlo
+            try:
+                if hasattr(self.widget_C, "_server"):
+                    self.widget_C._server.received.disconnect()
+                    self.widget_C._server.client_connected.disconnect()
+                if hasattr(self.widget_C, "_client"):
+                    self.widget_C._client.received.disconnect()
+                    self.widget_C._client.connected.disconnect()
+            except Exception:
+                pass
+            self.stacked_widget.removeWidget(self.widget_C)
+            self.widget_C.deleteLater()
+
+        self.widget_C = Level1(
+            rol=rol, host=host, ip=ip, port=port,
+            round=round, prev_points=prev_points,
+            prev_enemy_points=prev_enemy_points,
+            existing_server=self._server,
+            existing_client=self._client,
+        )
+        ...
+        # Conectar señales de status bar
+        if self._server:
+            self._server.client_connected.connect(
+                lambda: self.status_bar.showMessage("Jugador conectado ✓")
+            )
+        if self._client:
+            self._client.connected.connect(
+                lambda: self.status_bar.showMessage(f"Conectado a {ip}:{port} ✓")
+            )
+            self._client.connection_failed.connect(
+                lambda err: self.status_bar.showMessage(f"Error de conexión: {err}")
+            )
+
+        self.widget_C.signal_back.connect(
+            lambda: self.stacked_widget.setCurrentWidget(self.widget_BB)
+        )
+        self.widget_C.signal_back_init.connect(
+            lambda: self.stacked_widget.setCurrentWidget(self.widget_A)
+        )
+        self.widget_C.signal_next_level.connect(self._on_next_level)
 
         self.stacked_widget.addWidget(self.widget_C)
         self.stacked_widget.setCurrentWidget(self.widget_C)
@@ -238,14 +330,12 @@ class MainWindow(QMainWindow):
         self.dialog = QDialog(self)
 
         self.dialog.setWindowTitle(f"Ayuda de {APP_NOMBRE}")
-
         self.dialog.setWindowFlags(
             Qt.Window
             | Qt.WindowMinimizeButtonHint
             | Qt.WindowMaximizeButtonHint
             | Qt.WindowCloseButtonHint
         )
-
         self.dialog.setWindowModality(Qt.NonModal)
 
         self.pixmap = QPixmap(APP_ICON_PNG).scaled(
@@ -257,9 +347,7 @@ class MainWindow(QMainWindow):
         self.label_1 = QLabel()
         self.label_1.setPixmap(QPixmap(self.pixmap))
         self.label_1.setScaledContents(False)
-
         self.label_2 = QLabel(f"<b>{APP_NOMBRE}</b> > Ayuda")
-
         self.label_3 = QLabel(f"<b>Navegación</b>"
                               f"<br><br>"
                               f"(↑) <b>Flecha arriba</b>. Mover hacia arriba."
@@ -357,13 +445,13 @@ class MainWindow(QMainWindow):
         self.stacked_widget.setCurrentWidget(self.widget_BB)
 
     def exit_app(self):
-        # TODO: FALTA CERRAR DE FORMA SEGURA (GUARDAR/DESCARTAR CAMBIOS) ===============================================
         sys.exit()
 
 # Ejecución
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
+    # Apariencia
     palette = app.palette()
     palette.setColor(QPalette.ColorRole.WindowText, QColor("white"))
     app.setPalette(palette)
@@ -373,6 +461,7 @@ if __name__ == "__main__":
     audio.background()
     sound = Sound()
 
+    # Ventana
     window = MainWindow()
     window.audio = audio
     window.show()

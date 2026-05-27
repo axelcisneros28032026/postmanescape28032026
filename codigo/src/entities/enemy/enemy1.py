@@ -29,12 +29,46 @@ class Enemy(QGraphicsPixmapItem):
                 os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "walk", "right", "1.png"),
                 os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "walk", "right", "2.png"),
             ],
+            "run_left": [
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "down", "1.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "down", "2.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "down", "3.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "down", "4.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "down", "5.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "down", "6.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "down", "7.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "down", "8.png"),
+            ],
+            "run_right": [
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "right", "1.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "right", "2.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "right", "3.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "right", "4.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "right", "5.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "right", "6.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "right", "7.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "run", "right", "8.png"),
+            ],
             "jump_up": [
                 os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "up", "1.png"),
                 os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "up", "2.png"),
                 os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "up", "3.png"),
                 os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "up", "4.png"),
                 os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "up", "5.png"),
+            ],
+            "jump_left": [
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "down", "1.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "down", "2.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "down", "3.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "down", "4.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "down", "5.png"),
+            ],
+            "jump_right": [
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "right", "1.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "right", "2.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "right", "3.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "right", "4.png"),
+                os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "right", "5.png"),
             ],
             "climb_up": [
                 os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "climb", "up", "1.png"),
@@ -73,6 +107,9 @@ class Enemy(QGraphicsPixmapItem):
                 "right": os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "idle", "right", "1.png"),
                 "up": os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "idle", "up", "1.png"),
                 "down": os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "climb", "up", "6.png"),
+                "jump_up": os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "up", "1.png"),
+                "jump_left": os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "down", "1.png"),
+                "jump_right": os.path.join(DIR_IMAGES, "sprites", "enemy", "standard", "jump", "right", "1.png"),
             }
         }
 
@@ -100,19 +137,23 @@ class Enemy(QGraphicsPixmapItem):
 
         if direction == "idle":
             frame = self.frames["idle"].get(self.last_direction, self.frames["idle"]["right"])
+        elif direction == "jump_up":
+            self.last_direction = direction
+            frames = self.frames[direction]
+
+            # Avanzar frame cada N ticks
+            self._anim_counter += 0.25
+            if self._anim_counter >= self._anim_speed:
+                self._anim_counter = 0
+                self._frame_index = (self._frame_index + 1) % len(frames)
+
+            frame = frames[self._frame_index]
         else:
             self.last_direction = direction
             frames = self.frames[direction]
 
             # Avanzar frame cada N ticks
-            if self.last_direction == "jump_up":
-                for i in range(5):
-                    self._anim_counter += 1
-                    if self._anim_counter >= self._anim_speed:
-                        self._anim_counter = 0
-                        self._frame_index = (self._frame_index + 1) % len(frames)
-            else:
-                self._anim_counter += 1
+            self._anim_counter += 1
             if self._anim_counter >= self._anim_speed:
                 self._anim_counter = 0
                 self._frame_index = (self._frame_index + 1) % len(frames)
@@ -121,13 +162,22 @@ class Enemy(QGraphicsPixmapItem):
 
         self.setPixmap(QPixmap(frame))
 
+    def set_frame(self, frame: int):
+        direction = self.current_direction
+        if direction == "idle":
+            return  # idle usa un dict, no lista, no se anima por frame
+        frames = self.frames.get(direction, [])
+        if isinstance(frames, list) and 0 <= frame < len(frames):
+            self._frame_index = frame
+            self.setPixmap(QPixmap(frames[frame]))
+
     def boundingRect(self):
         rect = self.pixmap().rect()
 
         # Ajuste de bordes a partir del área original
         border_left = 16
         border_right = -16
-        border_top = -8
+        border_top = -16
         border_bottom = 0
 
         return QRectF(
