@@ -1,11 +1,3 @@
-"""
-network.py  –  Postman Escape | Módulo de red
-Colócalo en:  src/network/network.py
-
-Servidor  →  rol "enemy"   (hostea)
-Cliente   →  rol "player"  (se conecta)
-"""
-
 import json
 import socket
 import threading

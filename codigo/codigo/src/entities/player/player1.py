@@ -163,13 +163,29 @@ class Player(QGraphicsPixmapItem):
         self.setPixmap(QPixmap(frame))
 
     def set_frame(self, frame: int):
-        direction = self.current_direction
-        if direction == "idle":
-            return  # idle usa un dict, no lista, no se anima por frame
-        frames = self.frames.get(direction, [])
-        if isinstance(frames, list) and 0 <= frame < len(frames):
-            self._frame_index = frame
-            self.setPixmap(QPixmap(frames[frame]))
+        try:
+            # Intenta con _animations
+            animations = getattr(self, "_animations", None)
+            # Si no existe, busca otros nombres comunes
+            if animations is None:
+                animations = getattr(self, "animations", None)
+            if animations is None:
+                animations = getattr(self, "_frames", None)
+            if animations is None:
+                animations = getattr(self, "frames", None)
+
+            if animations is None:
+                return  # No se encontró ningún dict de animaciones, salir sin error
+
+            direction = getattr(self, "current_direction", None)
+            if direction is None:
+                return
+
+            frames = animations.get(direction, [])
+            if frames and 0 <= frame < len(frames):
+                self.setPixmap(frames[frame])
+        except Exception:
+            pass  # Silencia cualquier error inesperado
 
     def boundingRect(self):
         rect = self.pixmap().rect()

@@ -33,71 +33,10 @@ class Level1(QWidget):
     signal_next_level = Signal() # Señal para avanzar
 
     # Lógica inicial
-    def __init__(self, rol="player", host=False, ip="127.0.0.1", port=25565,
-                 round=1, prev_points=0, prev_enemy_points=0,
-                 existing_server=None, existing_client=None):
+    def __init__(self, rol = "player", host = False, ip = "127.0.0.1", port = 25565, round = 1, prev_points = 0,
+                 prev_enemy_points = 0 ):
+
         super().__init__()
-
-        # Otros:
-        self.frequency = 8  # Frecuencia del hilo principal en milisegundos
-        self.party_status = True # Estado de partida actual
-        self.multiple_keys = set() # Conjunto de teclas presionadas
-        self.iterator_show_collisions = 0 # Iterador auxiliar para el visor de colisiones
-        self.show_collisions_toggle = False # Interruptor para mostrar colisiones
-        # Hilo principal
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.game_loop)
-        self.timer.start(self.frequency)
-
-        self._net_ready = False
-        self._net_send_timer = QTimer()
-        self._net_send_timer.setInterval(self.frequency)
-        self._net_send_timer.timeout.connect(self._net_send_state)
-
-        if host:
-            self.rol = "enemy"
-            if existing_server:
-                # Reutilizar — solo reconectar señales
-                self._server = existing_server
-                try:
-                    self._server.received.disconnect()
-                    self._server.client_connected.disconnect()
-                    self._server.disconnected.disconnect()
-                except Exception:
-                    pass
-                self._server.received.connect(self._net_on_received)
-                self._server.disconnected.connect(self._on_net_disconnected)
-                # Conexión ya activa, arrancar directo
-                QTimer.singleShot(100, self._on_net_ready)
-            else:
-                self._server = GameServer(port=port)
-                self._server.client_connected.connect(self._on_net_ready)
-                self._server.received.connect(self._net_on_received)
-                self._server.disconnected.connect(self._on_net_disconnected)
-                self._server.start()
-        else:
-            self.rol = "player"
-            if existing_client:
-                # Reutilizar — solo reconectar señales
-                self._client = existing_client
-                try:
-                    self._client.received.disconnect()
-                    self._client.connected.disconnect()
-                    self._client.disconnected.disconnect()
-                except Exception:
-                    pass
-                self._client.received.connect(self._net_on_received)
-                self._client.disconnected.connect(self._on_net_disconnected)
-                # Conexión ya activa, arrancar directo
-                QTimer.singleShot(100, self._on_net_ready)
-            else:
-                self._client = GameClient(host=ip, port=port)
-                self._client.connected.connect(self._on_net_ready)
-                self._client.received.connect(self._net_on_received)
-                self._client.disconnected.connect(self._on_net_disconnected)
-                self._client.connect_to_server()
-
-        self.timer.start(self.frequency)
 
         self.round = round
         self.player_points = prev_points
@@ -114,6 +53,13 @@ class Level1(QWidget):
 
         self.pushButton_back = QPushButton("←")
         self.pushButton_back_init = QPushButton("🏠")
+
+        # Otros:
+        self.frequency = 8  # Frecuencia del hilo principal en milisegundos
+        self.party_status = True # Estado de partida actual
+        self.multiple_keys = set() # Conjunto de teclas presionadas
+        self.iterator_show_collisions = 0 # Iterador auxiliar para el visor de colisiones
+        self.show_collisions_toggle = False # Interruptor para mostrar colisiones
 
         # Rol de juego
         self.rol = rol
@@ -306,6 +252,35 @@ class Level1(QWidget):
 
         # --------------------------------------------------------------------------------------------------------------
         # Temporizadores
+
+        # Hilo principal
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.game_loop)
+
+        # ── Red ──────────────────────────────────────────────────────────────
+        self.rol = rol
+        self._net_ready = False  # True cuando hay conexión activa
+        self._net_send_timer = QTimer()
+        self._net_send_timer.setInterval(self.frequency)  # mismo rate que game_loop
+        self._net_send_timer.timeout.connect(self._net_send_state)
+
+        if host:  # Soy Enemy / Servidor
+            self._server = GameServer(port=port)
+            self._server.client_connected.connect(self._on_net_ready)
+            self._server.received.connect(self._net_on_received)
+            self._server.disconnected.connect(self._on_net_disconnected)
+            self._server.start()
+            self.rol = "enemy"
+        else:  # Soy Player / Cliente
+            self._client = GameClient(host=ip, port=port)
+            self._client.connected.connect(self._on_net_ready)
+            self._client.received.connect(self._net_on_received)
+            self._client.disconnected.connect(self._on_net_disconnected)
+            self._client.connect_to_server()
+            self.rol = "player"
+        # ─────────────────────────────────────────────────────────────────────
+
+        self.timer.start(self.frequency)
 
         # Administrador de daño
         self.player_damage_timer = QTimer()
@@ -977,13 +952,16 @@ class Level1(QWidget):
         self.enemy_throwing_bone_state = not self.enemy_throwing_bone_state
 
     def manage_game_progress(self, winner=None):
-        if not self.party_status:  # ← guard para evitar doble llamada
-            return
-
         self._net_send({"type": "game_over", "winner": winner})
         self.party_status = False
         self.winner = winner
 
+        if self.winner == "player":
+            print("GANADOR: PLAYER")
+        elif self.winner == "enemy":
+            print("GANADOR: ENEMY")
+
+        # Cuando termine el nivel y quieras avanzar:
         self.round += 1
         self.signal_next_level.emit()
 
@@ -1002,9 +980,7 @@ class Level1(QWidget):
 # ======================================================================================================================
 # Hilo principal
     def game_loop(self):
-        self.party_status = True
         print(self.round)
-        print(self.party_status)
         net_mode = self._net_ready
 
         if self.party_status and self._net_ready:
@@ -1531,11 +1507,14 @@ class Level1(QWidget):
             self._client.send(data)
 
     def _on_net_ready(self):
-        """Llamado cuando la conexión queda establecida."""
         self._net_ready = True
         self._net_send_timer.start()
-        self.timer.start(self.frequency)   # arranca/reactiva el game loop
+        self.timer.start(self.frequency)
         print(f"[Red] Conexión lista. Rol: {self.rol}")
+
+        # DEBUG TEMPORAL: ver atributos del sprite
+        print("Atributos Player:", [a for a in dir(self.player) if not a.startswith("__")])
+        print("Atributos Enemy:", [a for a in dir(self.enemy) if not a.startswith("__")])
 
     def _on_net_disconnected(self):
         self._net_ready = False
@@ -1551,7 +1530,7 @@ class Level1(QWidget):
                     "x":       self.enemy.x(),
                     "y":       self.enemy.y(),
                     "dir":     self.enemy.current_direction,
-                    "frame": getattr(self.enemy, "_frame_index", 0),
+                    "frame":   getattr(self.enemy, "_frame_index", 0),
                     "life":    self.enemy_life_current,
                     "points":  self.enemy_points,
                     "jumping": self.enemy_jumping_state,
@@ -1574,7 +1553,7 @@ class Level1(QWidget):
                     "x":       self.player.x(),
                     "y":       self.player.y(),
                     "dir":     self.player.current_direction,
-                    "frame": getattr(self.player, "_frame_index", 0),
+                    "frame":   getattr(self.player, "_frame_index", 0),
                     "life":    self.player_life_current,
                     "points":  self.player_points,
                     "jumping": self.player_jumping_state,
@@ -1591,7 +1570,6 @@ class Level1(QWidget):
                 if p:
                     self.player.setPos(p["x"], p["y"])
                     self.player.set_direction(p.get("dir", "idle"))
-                    self.player.set_frame(p.get("frame", 0))
                     self.player_life_current = p.get("life", self.player_life_current)
                     self.player_points       = p.get("points", self.player_points)
                     self.player_jumping_state = p.get("jumping", False)
@@ -1601,7 +1579,6 @@ class Level1(QWidget):
                 if e:
                     self.enemy.setPos(e["x"], e["y"])
                     self.enemy.set_direction(e.get("dir", "idle"))
-                    self.enemy.set_frame(e.get("frame", 0))
                     self.enemy_life_current = e.get("life", self.enemy_life_current)
                     self.enemy_points       = e.get("points", self.enemy_points)
                     self.enemy_jumping_state = e.get("jumping", False)

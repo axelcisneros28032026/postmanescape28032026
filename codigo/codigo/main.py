@@ -31,12 +31,6 @@ APP_NOMBRE_2 = ("Postman\n"
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
-        self._server = None
-        self._client = None
-        self.ip = "127.0.0.1"
-        self.port = 25565
-
         # Disposición de ventana
         self.setWindowTitle(f"{APP_NOMBRE}")
         self.setWindowIcon(QIcon(APP_ICON))
@@ -191,105 +185,88 @@ class MainWindow(QMainWindow):
         self.widget_BB.signalVolverInicio.connect(lambda: self.stacked_widget.setCurrentWidget(self.widget_A))
         self.widget_BB.signalVolverInicio.connect(lambda: sound.click_button())
 
-    def host_game(self, port):
-        self.ip = "127.0.0.1"
-        self.port = int(port)
-        self.status_bar.showMessage(f"Esperando jugador en puerto {port}…")
-
-        # Crear el servidor UNA SOLA VEZ aquí
-        from src.network.network import GameServer
-        self._server = GameServer(port=self.port)
-        self._server.start()
-
-        self.start_game(rol="enemy", host=True, ip=self.ip, port=self.port)
-
     def network_settings(self, ip, port):
         try:
             port = int(port)
         except ValueError:
             self.status_bar.showMessage("Puerto inválido")
             return
+
         self.ip = ip
         self.port = port
-        self.status_bar.showMessage(f"Conectando a {ip}:{port}…")
-
-        # Crear el cliente UNA SOLA VEZ aquí
-        from src.network.network import GameClient
-        self._client = GameClient(host=ip, port=port)
-        self._client.connect_to_server()
-
-        QTimer.singleShot(500, lambda: self.start_game(
-            rol="player", host=False, ip=ip, port=port
-        ))
-
-    def _on_next_level(self):
-        current_rol = self.widget_C.rol
-        next_rol = "enemy" if current_rol == "player" else "player"
-        was_host = hasattr(self.widget_C, "_server")
-
-        # Reutilizar la conexión existente
-        existing_server = getattr(self.widget_C, "_server", None)
-        existing_client = getattr(self.widget_C, "_client", None)
-
-        self.start_game(
-            rol=next_rol,
-            host=was_host,
-            ip=self.ip,
-            port=self.port,
-            round=self.widget_C.round,
-            prev_points=self.widget_C.player_points,
-            prev_enemy_points=self.widget_C.enemy_points,
-            existing_server=existing_server,
-            existing_client=existing_client,
+        self.status_bar.showMessage(
+            f"Conectando a {ip}:{port}…"
         )
 
-    def start_game(self, rol="player", host=False, ip="127.0.0.1", port=25565,
-                   round=1, prev_points=0, prev_enemy_points=0,
-                   existing_server=None, existing_client=None):
+        QTimer.singleShot(
+            500,
+            lambda: self.start_game(
+                rol="player",
+                host=False,
+                ip=ip,
+                port=int(port)
+            )
+        )
+
+    def host_game(self, port):
+        self.ip = "127.0.0.1"
+        self.port = int(port)
+        self.status_bar.showMessage(f"Esperando jugador en puerto {port}…")
+        self.start_game(
+            rol="enemy",
+            host=True,
+            ip=self.ip,
+            port=self.port
+        )
+
+    def start_game(self, rol="player", host=False, ip="127.0.0.1", port=25565, round=1, prev_points=0, prev_enemy_points=0):
         from src.scenes.level1 import Level1
 
         if hasattr(self, "widget_C") and self.widget_C is not None:
-            # Desconectar señales del level anterior antes de destruirlo
-            try:
-                if hasattr(self.widget_C, "_server"):
-                    self.widget_C._server.received.disconnect()
-                    self.widget_C._server.client_connected.disconnect()
-                if hasattr(self.widget_C, "_client"):
-                    self.widget_C._client.received.disconnect()
-                    self.widget_C._client.connected.disconnect()
-            except Exception:
-                pass
             self.stacked_widget.removeWidget(self.widget_C)
             self.widget_C.deleteLater()
 
-        self.widget_C = Level1(
-            rol=rol, host=host, ip=ip, port=port,
-            round=round, prev_points=prev_points,
-            prev_enemy_points=prev_enemy_points,
-            existing_server=self._server,
-            existing_client=self._client,
-        )
+        self.widget_C = Level1(rol=rol, host=host, ip=ip, port=port, round=round, prev_points=prev_points, prev_enemy_points=prev_enemy_points)
         ...
-        # Conectar señales de status bar
-        if self._server:
-            self._server.client_connected.connect(
-                lambda: self.status_bar.showMessage("Jugador conectado ✓")
-            )
-        if self._client:
-            self._client.connected.connect(
-                lambda: self.status_bar.showMessage(f"Conectado a {ip}:{port} ✓")
-            )
-            self._client.connection_failed.connect(
-                lambda err: self.status_bar.showMessage(f"Error de conexión: {err}")
-            )
-
+        self.widget_C.setContentsMargins(0, 0, 0, 0)
         self.widget_C.signal_back.connect(
-            lambda: self.stacked_widget.setCurrentWidget(self.widget_BB)
+            lambda: self.stacked_widget.setCurrentWidget(
+                self.widget_BB
+            )
         )
         self.widget_C.signal_back_init.connect(
-            lambda: self.stacked_widget.setCurrentWidget(self.widget_A)
+            lambda: self.stacked_widget.setCurrentWidget(
+                self.widget_A
+            )
         )
-        self.widget_C.signal_next_level.connect(self._on_next_level)
+        self.widget_C.signal_next_level.connect(
+            lambda: self.start_game(
+                rol=self.widget_C.rol,
+                host=(hasattr(self.widget_C, "_server")),
+                ip=self.ip,
+                port=self.port,
+                round=self.widget_C.round,  # 👈 sin +1
+                prev_points=self.widget_C.player_points
+            )
+        )
+
+        if host:
+            self.widget_C._server.client_connected.connect(
+                lambda: self.status_bar.showMessage(
+                    "Jugador conectado ✓"
+                )
+            )
+        else:
+            self.widget_C._client.connected.connect(
+                lambda: self.status_bar.showMessage(
+                    f"Conectado a {ip}:{port} ✓"
+                )
+            )
+            self.widget_C._client.connection_failed.connect(
+                lambda err: self.status_bar.showMessage(
+                    f"Error de conexión: {err}"
+                )
+            )
 
         self.stacked_widget.addWidget(self.widget_C)
         self.stacked_widget.setCurrentWidget(self.widget_C)
