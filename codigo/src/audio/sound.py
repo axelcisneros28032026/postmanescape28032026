@@ -6,13 +6,13 @@ from src.config.rutas import *
 
 class Sound:
     def __init__(self):
-        self.volume_general = 0.5
+        self.volume_general = 1
 
     def background(self):
         self.musica = QSoundEffect()
         ruta_musica = os.path.join(DIR_MUSIC, "background.wav")
         self.musica.setSource(QUrl.fromLocalFile(ruta_musica))
-        self.musica.setVolume(self.volume_general * 0.025)
+        self.musica.setVolume(self.volume_general * 0.25)
         self.musica.play()
 
     def click_button(self):

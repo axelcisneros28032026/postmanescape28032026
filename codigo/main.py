@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
         self.widget_B = VentanaRegistro()
         # [BB] Pantalla para configuración de conexión en red
         self.widget_BB = Ventanared()
-        # [C] Pantalla estática
+        # [C] Pantalla de nivel
         self.widget_C = QWidget()
 
         # [-] Gestión de pantallas
@@ -168,7 +168,6 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.status_bar)
         self.setCentralWidget(self.stacked_widget)
 
-        # self.start_game()
     # Eventos y Métodos
         self.navigation_menu.signalOpcionElegida.connect(self.navigation_menu_options)
         self.navigation_menu.signalOpcionElegida.connect(lambda: sound.click_button())
@@ -219,15 +218,35 @@ class MainWindow(QMainWindow):
             port=self.port
         )
 
-    def start_game(self, rol="player", host=False, ip="127.0.0.1", port=25565, round=1, prev_points=0, prev_enemy_points=0):
-        from src.scenes.level1 import Level1
+    def _on_net_ready(self):
+        self._net_ready = True
+        self.timer.start(self.frequency)
+        self._net_send_timer.start()
+        print(f"[Red] Conexión lista. Rol: {self.rol}")
+
+    def start_game(self, rol="player", host=False, ip="127.0.0.1", port=25565, round=1, prev_points=0,
+                   prev_enemy_points=0):
+
+        # Elegir nivel según ronda
+        if round >= 3:
+            from src.scenes.level2 import Level2 as LevelClass
+        else:
+            from src.scenes.level1 import Level1 as LevelClass
 
         if hasattr(self, "widget_C") and self.widget_C is not None:
+            if hasattr(self.widget_C, "_server"):
+                self.widget_C._server.stop()
+            if hasattr(self.widget_C, "_client"):
+                self.widget_C._client.stop()
             self.stacked_widget.removeWidget(self.widget_C)
             self.widget_C.deleteLater()
 
-        self.widget_C = Level1(rol=rol, host=host, ip=ip, port=port, round=round, prev_points=prev_points, prev_enemy_points=prev_enemy_points)
-        ...
+        self.widget_C = LevelClass(
+            rol=rol, host=host, ip=ip, port=port,
+            round=round, prev_points=prev_points,
+            prev_enemy_points=prev_enemy_points
+        )
+
         self.widget_C.setContentsMargins(0, 0, 0, 0)
         self.widget_C.signal_back.connect(
             lambda: self.stacked_widget.setCurrentWidget(
@@ -239,14 +258,16 @@ class MainWindow(QMainWindow):
                 self.widget_A
             )
         )
+
         self.widget_C.signal_next_level.connect(
             lambda: self.start_game(
-                rol=self.widget_C.rol,
-                host=(hasattr(self.widget_C, "_server")),
+                rol=self.widget_C._next_rol,
+                host=hasattr(self.widget_C, "_server"),
                 ip=self.ip,
                 port=self.port,
-                round=self.widget_C.round,  # 👈 sin +1
-                prev_points=self.widget_C.player_points
+                round=self.widget_C.round,
+                prev_points=self.widget_C.player_points,
+                prev_enemy_points=self.widget_C.enemy_points,
             )
         )
 
@@ -287,7 +308,6 @@ class MainWindow(QMainWindow):
             self.showFullScreen()
 
     def read_ping(self):
-# TODO: METODO SIMULADO FALTA COMPLETAR ================================================================================
         self.ping = 5
         print(self.ping)
         if self.ping >= 0 and self.ping <= 15:
@@ -325,13 +345,20 @@ class MainWindow(QMainWindow):
         self.label_1.setPixmap(QPixmap(self.pixmap))
         self.label_1.setScaledContents(False)
         self.label_2 = QLabel(f"<b>{APP_NOMBRE}</b> > Ayuda")
-        self.label_3 = QLabel(f"<b>Navegación</b>"
-                              f"<br><br>"
-                              f"(↑) <b>Flecha arriba</b>. Mover hacia arriba."
-                              f"<br><br>"
-                              f"(↓) <b>Flecha abajo</b>. Mover hacia abajo."
-                              f"<br><br>"
-                              f"(↵) <b>Enter</b>. Seleccionar opción."
+        self.label_3 = QLabel(
+            "<b>Navegación</b>"
+            "<br><br>"
+            "(↑) <b>Flecha arriba</b>. Mover hacia arriba."
+            "<br><br>"
+            "(↓) <b>Flecha abajo</b>. Mover hacia abajo."
+            "<br><br>"
+            "(↵) <b>Enter</b>. Seleccionar opción."
+            "<br><br>"
+            "(E) <b>PowerUp 1</b>"
+            "<br><br>"
+            "(R) <b>PowerUp 2</b>"
+            "<br><br>"
+            "(Ctrl) <b>PowerUp 3</b>"
         )
         self.label_4 = QLabel(f"<b>Atajos del teclado</b>"
                               f"<br><br>"
@@ -408,10 +435,8 @@ class MainWindow(QMainWindow):
     def navigation_menu_options(self, index):
         if index == 0:
             self.stacked_widget.setCurrentWidget(self.widget_B)
-            print(f"[Alerta] Falta el método de la opción {index}")
         elif index == 1:
-            #self.stacked_widget.setCurrentIndex(self.widget_C)
-            print(f"[Alerta] Falta el método de la opción {index}")
+            self.stacked_widget.setCurrentWidget(self.widget_config)
         elif index == 2:
             self.exit_app()
 

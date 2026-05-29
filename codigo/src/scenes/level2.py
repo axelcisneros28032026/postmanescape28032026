@@ -11,7 +11,7 @@ from config import fuente_nombre
 from src.audio.sound import Sound
 from src.entities.NPC.victim.victim1 import Victim
 from src.entities.blocks.ladders import Ladders
-from src.entities.blocks.plataforms import Platforms
+from src.entities.blocks.plataforms_2 import Platforms
 from src.entities.enemy.enemy1 import Enemy
 from src.entities.items.coins import Coins
 from src.entities.tools.aim import Aim
@@ -25,7 +25,7 @@ sound = Sound()
 
 # ======================================================================================================================
 # Nivel 1
-class Level1(QWidget):
+class Level2(QWidget):
 
     # Señales
     signal_back = Signal() # Señal para volver a la pantalla anterior
@@ -79,9 +79,9 @@ class Level1(QWidget):
         # --------------------------------------------------------------------------------------------------------------
         # Potenciadores:
         # Aceleración
-        self.player_run_initial = 5 # Tiempo de aceleración inicial
+        self.player_run_initial = 4 # Tiempo de aceleración inicial
         self.player_run_current = self.player_run_initial # Tiempo de aceleración actual (segundos)
-        self.player_run_cooldown = 8  # Tiempo de espera para reactivar la aceleración (segundos)
+        self.player_run_cooldown = 10  # Tiempo de espera para reactivar la aceleración (segundos)
         self.player_run_counter = 0 # Contador de la aceleración
         self.player_run_status = False # Estado de aceleración
         self.player_run_toggle = False # Interruptor de aceleración
@@ -89,18 +89,18 @@ class Level1(QWidget):
         self.player_run_timer = QTimer(timeout = self.player_power_up_run) # Contador de aceleración
 
         # Regeneración
-        self.player_regeneration_initial = 3 # Tiempo de regeneración inicial (segundos)
+        self.player_regeneration_initial = 2 # Tiempo de regeneración inicial (segundos)
         self.player_regeneration_current = self.player_regeneration_initial # Tiempo de regeneración actual
-        self.player_regeneration_cooldown = 5 # Tiempo de espera para reactivar la regeneración (segundos)
+        self.player_regeneration_cooldown = 7 # Tiempo de espera para reactivar la regeneración (segundos)
         self.player_regeneration_counter = 0  # Contador de la regeneración
         self.player_regeneration_status = False # Estado de regeneración
         self.player_regeneration_lock = False # Bloqueo de regeneración
         self.player_regeneration_timer = QTimer(timeout = self.player_power_up_regeneration)  # Contador de regeneración
 
         # Inmunidad
-        self.player_immunity_initial = 3  # Tiempo de inmunidad inicial (segundos)
+        self.player_immunity_initial = 2  # Tiempo de inmunidad inicial (segundos)
         self.player_immunity_current = self.player_immunity_initial  # Tiempo de inmunidad actual
-        self.player_immunity_cooldown = 5  # Tiempo de espera para reactivar la inmunidad (segundos)
+        self.player_immunity_cooldown = 8  # Tiempo de espera para reactivar la inmunidad (segundos)
         self.player_immunity_counter = 0 # Contador de la inmunidad
         self.player_immunity_status = False  # Estado de inmunidad
         self.player_immunity_lock = False  # Bloqueo de inmunidad
@@ -159,39 +159,39 @@ class Level1(QWidget):
         # ==============================================================================================================
         # Enemigo
         self.enemy_anim_speed = 4  # Velocidad de animaciones
-        self.enemy_life_initial = 10  # Vida inicial (unidades)
+        self.enemy_life_initial = 15  # Vida inicial (unidades)
         self.enemy_life_current = self.enemy_life_initial  # Vida actual
 
         # --------------------------------------------------------------------------------------------------------------
         # Daños
-        self.enemy_damage_bone = 1 # Daño por hueso lanzado
+        self.enemy_damage_bone = 2 # Daño por hueso lanzado
         # --------------------------------------------------------------------------------------------------------------
 
         # --------------------------------------------------------------------------------------------------------------
         # Potenciadores:
 
         # Recargar
-        self.enemy_reload_initial = 3  # Tiempo de regeneración inicial (segundos)
+        self.enemy_reload_initial = 4  # Tiempo de regeneración inicial (segundos)
         self.enemy_reload_current = self.enemy_reload_initial  # Tiempo de regeneración actual
-        self.enemy_reload_cooldown = 5  # Tiempo de espera para reactivar la regeneración (segundos)
+        self.enemy_reload_cooldown = 4  # Tiempo de espera para reactivar la regeneración (segundos)
         self.enemy_reload_counter = 0  # Contador de la regeneración
         self.enemy_reload_status = False  # Estado de regeneración
         self.enemy_reload_lock = False  # Bloqueo de regeneración
         self.enemy_reload_timer = QTimer(timeout = self.enemy_power_up_reload)  # Contador de regeneración
 
         # Escape
-        self.enemy_escape_initial = 3  # Tiempo de inmunidad inicial (segundos)
+        self.enemy_escape_initial = 4  # Tiempo de inmunidad inicial (segundos)
         self.enemy_escape_current = self.enemy_escape_initial  # Tiempo de inmunidad actual
-        self.enemy_escape_cooldown = 5  # Tiempo de espera para reactivar la inmunidad (segundos)
+        self.enemy_escape_cooldown = 6  # Tiempo de espera para reactivar la inmunidad (segundos)
         self.enemy_escape_counter = 0  # Contador de la inmunidad
         self.enemy_escape_status = False  # Estado de inmunidad
         self.enemy_escape_lock = False  # Bloqueo de inmunidad
         self.enemy_escape_timer = QTimer(timeout=self.enemy_power_up_escape)  # Contador de inmunidad
 
         # Daño extra (Huesos)
-        self.enemy_sharpness_initial = 3  # Tiempo de daño extra inicial (segundos)
+        self.enemy_sharpness_initial = 4  # Tiempo de daño extra inicial (segundos)
         self.enemy_sharpness_current = self.enemy_sharpness_initial  # Tiempo de daño extra actual
-        self.enemy_sharpness_cooldown = 5  # Tiempo de espera para reactivar daño extra (segundos)
+        self.enemy_sharpness_cooldown = 6  # Tiempo de espera para reactivar daño extra (segundos)
         self.enemy_sharpness_counter = 0  # Contador del power-up de daño extra
         self.enemy_sharpness_status = False  # Estado del power-up de daño extra
         self.enemy_sharpness_lock = False  # Bloqueo del power-up de daño extra
@@ -291,7 +291,7 @@ class Level1(QWidget):
 
         # Visualización de datos
         if self.rol == "player":
-            self.label = QLabel(f"Nivel 1 | Ronda {self.round}")
+            self.label = QLabel(f"Nivel 2 | Ronda {self.round}")
             self.label.setAlignment(Qt.AlignCenter)
             self.label_2 = QLabel(f"I - {self.player_points}")
             self.label_3 = QLabel(f"Top - {self.players_top}")
@@ -305,7 +305,7 @@ class Level1(QWidget):
             self.label_8 = QLabel(f"️🏃 {self.player_run_current} s")
             self.label_8.setAlignment(Qt.AlignLeft)
         if self.rol == "enemy":
-            self.label = QLabel(f"Nivel 1 | Ronda {self.round}")
+            self.label = QLabel(f"Nivel 2 | Ronda {self.round}")
             self.label.setAlignment(Qt.AlignCenter)
             self.label_2 = QLabel(f"I - {self.player_points}")
             self.label_2.setAlignment(Qt.AlignCenter)
@@ -1799,7 +1799,7 @@ class Level1(QWidget):
 # Ejecución
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = Level1()
+    window = Level2()
     window.show()
     app.exec()
 # ======================================================================================================================

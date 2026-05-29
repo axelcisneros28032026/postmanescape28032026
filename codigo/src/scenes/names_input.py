@@ -22,7 +22,6 @@ class VentanaRegistro(QWidget):
 
         self.fuentes = fuente_nombre()
 
-        # Estilos (fondo negro, texto amarillo)
         self.setStyleSheet(f"""
             QWidget {{
                 background-color: black;
